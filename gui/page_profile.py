@@ -1204,11 +1204,11 @@ class PageProfile(tk.Frame):
         :return:
         """
         if not self.parent_app.get_loaded_files_list():
-            self.main_app.show_information('No data files loaded',
+            main_gui.show_information('No data files loaded',
                                  'There are no data loaded. Start by selecting a file under "Get data file"')
             return False
         if not self.current_file_id:
-            self.main_app.show_information('No data file selected',
+            main_gui.show_information('No data file selected',
                                  'Select a file under "Select data file" and press "Update data file"')
             return False
 
