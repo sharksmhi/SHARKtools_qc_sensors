@@ -12,6 +12,7 @@ import pandas as pd
 import datetime
 
 import core
+import gui as main_gui
 from plugins.SHARKtools_qc_sensors import gui
 from sharkpylib import utils
 
@@ -317,7 +318,7 @@ def run_automatic_qc(controller, automatic_qc_widget):
     qc_routine_list = automatic_qc_widget.get_checked_item_list()
     nr_routines = len(qc_routine_list)
     if nr_routines == 0:
-        gui.show_information('Run QC', 'No QC routines selected!')
+        main_gui.show_information('Run QC', 'No QC routines selected!')
         return False
 
     if nr_routines == 1:
@@ -365,7 +366,7 @@ def save_files(gismo_objects, save_widget):
     """
     directory = save_widget.get_directory()
     if not os.path.exists(directory):
-        gui.show_information('Missing directory',
+        main_gui.show_information('Missing directory',
                              'The given directory does not exists:\n{}\n\nNo files saved!'.format(directory))
         return
     file_path_mapping = {}
@@ -417,7 +418,7 @@ def save_files(gismo_objects, save_widget):
         for file_id in files_to_save:
             gismo_object = file_id_mapping[file_id]
             gismo_object.save_file(file_path=file_path_mapping[file_id], overwrite=True)
-    gui.show_information('Files saved!', '{} files have been saved to directory: \n {}'.format(len(files_to_save),
+    main_gui.show_information('Files saved!', '{} files have been saved to directory: \n {}'.format(len(files_to_save),
                                                                                                directory))
 
 
@@ -433,14 +434,14 @@ def save_file(gismo_object, save_widget):
     :return:
     """
     if not gismo_object:
-        gui.show_information('No file loaded', 'Cant save file, no file loaded.')
+        main_gui.show_information('No file loaded', 'Cant save file, no file loaded.')
         return
 
     directory = save_widget.stringvar_directory.get().strip()
     file_name = save_widget.stringvar_file_name.get().strip()
 
     if not all([directory, file_name]):
-        gui.show_information('Invalid directory or filename', 'Cant save plot! Invalid directory or filename.')
+        main_gui.show_information('Invalid directory or filename', 'Cant save plot! Invalid directory or filename.')
         return
     original_file_path = os.path.realpath(gismo_object.file_path)
     if not file_name.endswith('.txt'):
@@ -448,10 +449,10 @@ def save_file(gismo_object, save_widget):
     output_file_path = os.path.join(directory, file_name)
     print(output_file_path)
     print(original_file_path)
-    if not os.path.samefile(output_file_path, original_file_path):
+    if not (os.path.exists(output_file_path) and os.path.samefile(output_file_path, original_file_path)):
         try:
             gismo_object.save_file(file_path=output_file_path)
-            gui.show_information('File saved', 'File saved to:\n{}'.format(output_file_path))
+            main_gui.show_information('File saved', 'File saved to:\n{}'.format(output_file_path))
             return
         except GISMOExceptionFileExcists:
             if not messagebox.askyesno('Overwrite file!',
@@ -470,7 +471,7 @@ def save_file(gismo_object, save_widget):
     os.remove(output_file_path)
     shutil.copy2(temp_file_path, output_file_path)
     os.remove(temp_file_path)
-    gui.show_information('File saved', 'File saved to:\n{}'.format(output_file_path))
+    main_gui.show_information('File saved', 'File saved to:\n{}'.format(output_file_path))
 
 
 def save_plot(controller, plot_object, save_directory_widget, in_file_name='plot', **kwargs):
@@ -483,7 +484,7 @@ def save_plot(controller, plot_object, save_directory_widget, in_file_name='plot
     :return:
     """
     if not controller.current_file_id:
-        gui.show_information('No file loaded', 'Cant save plot, no file loaded.')
+        main_gui.show_information('No file loaded', 'Cant save plot, no file loaded.')
         return
 
     directory = save_directory_widget.get_directory()
@@ -491,7 +492,7 @@ def save_plot(controller, plot_object, save_directory_widget, in_file_name='plot
     file_name = '{}.{}'.format(in_file_name, kwargs.get('file_format', 'png'))
 
     if not all([directory, file_name]):
-        gui.show_information('Invalid directory or filename', 'Cant save plot! Invalid directory or filename.')
+        main_gui.show_information('Invalid directory or filename', 'Cant save plot! Invalid directory or filename.')
         return
 
     if not os.path.exists(directory):
@@ -537,11 +538,11 @@ def save_html_plot(controller, save_widget_html, flag_widget=None, save_director
 
     # Check selection
     if not any([export_combined_plots, export_individual_plots, export_individual_maps, parameter_list]):
-        gui.show_information('No selection', 'You need to select what type of plots/maps to export')
+        main_gui.show_information('No selection', 'You need to select what type of plots/maps to export')
 
     # Check directory
     if not directory:
-        gui.show_information('Missing directory', 'Could not save HTML maps and/or plots. No directory selected.')
+        main_gui.show_information('Missing directory', 'Could not save HTML maps and/or plots. No directory selected.')
         return
     if not os.path.exists(directory):
         create_dirs = messagebox.askyesno('Missing directory', 'Directory does not exist. Would you like to create a new directory?')
@@ -633,12 +634,12 @@ def match_data(controller, compare_widget):
     """
     if not all([controller.current_file_id, controller.current_ref_file_id]):
         if not controller.current_file_id:
-            gui.show_information('No data loaded', 'No main file loaded!')
+            main_gui.show_information('No data loaded', 'No main file loaded!')
         elif not controller.current_ref_file_id:
-            gui.show_information('No data loaded', 'No reference file loaded!')
+            main_gui.show_information('No data loaded', 'No reference file loaded!')
         raise GUIExceptionBreak
     elif controller.current_file_id == controller.current_ref_file_id:
-        gui.show_information('Cant compare the same data', 'Cant compare with yourself!')
+        main_gui.show_information('Cant compare the same data', 'Cant compare with yourself!')
         raise GUIExceptionBreak
 
     diffs = dict()
