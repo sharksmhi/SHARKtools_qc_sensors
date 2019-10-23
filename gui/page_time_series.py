@@ -1056,15 +1056,15 @@ class PageTimeSeries(tk.Frame):
 
         self.current_parameter = self.parameter_widget.get_value()
 
+        print('current_parameter', self.current_parameter)
         if not self.current_parameter:
-            return
+            raise GISMOException('No parameter selected')
 
         # Save parameter
         self.user.parameter_priority.set_priority(self.current_parameter)
 
         # First plot...
         self._update_plot(call_targets=False)
-
         # ...then set full range in plot without updating (not calling to update the tk.canvas).
         if self.user.options.setdefault('zoom_to_data_on_parameter_update', True):
             self.plot_object.zoom_to_data(call_targets=False, x_limits=True)

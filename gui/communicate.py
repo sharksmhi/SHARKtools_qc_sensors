@@ -1027,13 +1027,16 @@ def update_time_series_plot(gismo_object=None,
 
     # Check if data is available
     check_data = gismo_object.get_data(par)
-    print(np.where(~np.isnan(check_data[par])))
+    print('='*30)
+    print('par', par)
     print('no', len(np.where(~np.isnan(check_data[par]))[0]))
     print('yes', len(np.where(np.isnan(check_data[par]))[0]))
+    print('selection.selected_flags', selection.selected_flags)
 
     
     # Plot all flags combined. This is used for range selection.
     data = gismo_object.get_data('time', par, mask_options={'include_flags': selection.selected_flags})
+    print('data[par]', data[par])
 
     prop = {'linestyle': '', 
              'marker': None}
