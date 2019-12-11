@@ -13,7 +13,9 @@ INFO = dict(title='Sensor data QC',
                        dict(name='PageProfile',
                             title='Profile'),
                        dict(name='PageMetadata',
-                            title='Metadata')
+                            title='Metadata'),
+                        dict(name='PageSamplingTypeSettings',
+                            title='Sampling type files')
                        ],
             user_page_class='PageUser')  # Must match name in ALL_PAGES in main app
 
@@ -36,6 +38,6 @@ USER_SETTINGS = [('basic', 'filter'),
                  ('parameter', 'qc_routine_options'),
                  ('parameter', 'range'),
                  ('basic', 'sampling_depth'),
-                 ('basic', 'save'),
-                 ('basic', 'settingsfile')]
+                 ('basic', 'sampling_type_settings'),
+                 ('parameter', 'file_type')]
 

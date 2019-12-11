@@ -49,6 +49,7 @@ from .page_metadata import PageMetadata
 from .page_profile import PageProfile
 from .page_user import PageUser
 from .page_start import PageStart
+from .page_sampling_types_settings import PageSamplingTypeSettings
 
 # print('GUI IMPORT')
 # for key in sorted(sys.modules.keys()):

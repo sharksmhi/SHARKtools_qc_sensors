@@ -1,0 +1,80 @@
+{
+	"dependent_parameters": {
+		"data": {
+			"8178": [
+				"8063",
+				"8168",
+				"8174",
+				"8175",
+				"8179",
+				"8181",
+				"8187",
+				"8191"
+			]
+		},
+		"info": ""
+	},
+	"flags": {
+		"data": {
+			"": "Data kontrollerad av dataväd eller av dataleverantör",
+			"<": "Vädet understiger mätområdets undre gräns (även kallat rapporteringsgräns",
+			">": "Vädet överstiger mätområdets övre gräns",
+			"B": "Dåligt/ felaktigt väde",
+			"E": "Misstänkt extremväde som kontrollerats och funnits korrekt",
+			"M": "Väde saknas",
+			"R": "Uppskattat väde (genom interpolation eller extrapolation)",
+			"S": "Misstänkt väde - anses misstänkt baserat på kvalitetskontroll eller brister i provtagning/ analys",
+			"Z": "Nollväde per definition (t.ex. syrehalt nä svavelväte påvisas)"
+		},
+		"info": ""
+	},
+	"mandatory_columns": {
+		"data": {
+			"depth": "DEPH [m]",
+			"lat": "LATITUDE_DD",
+			"lon": "LONGITUDE_DD",
+			"station": "STATION",
+			"time": [
+				"YEAR",
+				"MONTH",
+				"DAY",
+				"HOUR",
+				"MINUTE",
+				"SECOND"
+			]
+		},
+		"info": ""
+	},
+	"parameter_mapping": {
+		"data": {
+			"external_column": "Standard format",
+			"file_name": "parameter_mapping_shark_standard",
+			"internal_column": "Display english",
+			"unit_column": "",
+			"encoding": "cp1252",
+			"qf_prefix": "Q_",
+			"qf_suffix": "",
+			"unit_starts_with": "["
+		},
+		"info": ""
+	},
+	"properties": {
+		"data": {
+			"missing_value": "",
+			"column_separator": "\t",
+			"comment_id": "//",
+			"encoding": "cp1252"
+		},
+		"info": ""
+	},
+	"station_mapping": {
+		"data": {
+			"external_column": "Stnreg",
+			"file_name": "mapping_station",
+			"header_starts_with": "stnreg_stnid",
+			"internal_column": "Stnreg"
+			"encoding": "cp1252"
+		},
+		"info": ""
+	}
+}

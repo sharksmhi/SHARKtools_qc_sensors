@@ -8,15 +8,6 @@ import tkinter as tk
 
 from plugins.SHARKtools_qc_sensors import gui
 
-pages = set()
-#============================================================================
-# Ferrybox pages
-try:
-    pages.add(gui.PageTimeSeries)
-except:
-    pass
-
-
 
 """
 ================================================================================
@@ -61,8 +52,12 @@ class PageStart(tk.Frame):
         # Buttons 
         self.button = {}
 
-        self.button_texts = {'Ferrybox\nand\nfixed platforms': 'PageTimeSeries'}
-        self.button_colors = {'PageTimeSeries': 'sandybrown'}
+        self.button_texts = {'Ferrybox\nand\nfixed platforms': 'PageTimeSeries',
+                             'CTD Profiles': 'PageProfile',
+                             'Sampling Type Settings': 'PageSamplingTypeSettings'}
+        self.button_colors = {'PageTimeSeries': 'sandybrown',
+                              'PageProfile': 'lightblue',
+                              'PageSamplingTypeSettings': 'green'}
 
 
         r=0

@@ -13,7 +13,7 @@ import datetime
 
 import core
 import gui as main_gui
-from plugins.SHARKtools_qc_sensors import gui
+
 from sharkpylib import utils
 
 import matplotlib.dates as dates
@@ -196,10 +196,10 @@ def get_flag_widget(parent=None,
     if settings_object:
         # Flags are sorted
         flags = settings_object.get_flag_list()
-        descriptions = settings_object.get_flag_description_list()
-        nr_flags = len(flags)
-        # colors = settings_object.get_flag_color_list()
-        # markersize = settings_object.get_flag_markersize_list()
+        print('--- flags', flags)
+        descriptions  = []
+        for flag in flags:
+            descriptions.append(settings_object.get_flag_description(flag))
     else:
         nr_flags = 6
         flags = list(range(nr_flags))
@@ -212,7 +212,7 @@ def get_flag_widget(parent=None,
 
     for f in flags:
         f = str(f)
-        if f in '48BS':
+        if f and f in '48BS':
             color_list.append(user_object.flag_color.setdefault(f, 'red'))
         else:
             color_list.append(user_object.flag_color.setdefault(f, 'black'))
@@ -357,7 +357,7 @@ def save_user_info_from_flag_widget(flag_widget, user_object):
     #     user_object.flag_color.set(f, c)
     #     user_object.flag_markersize.set(f, ms)
 
-def save_files(gismo_objects, save_widget):
+def save_files(file_id_list=None, session=None, save_widget=None, **kwargs):
     """
     Saves all gismo objects with original name in directory provided in save_widget.
     :param gimo_objects:
@@ -370,16 +370,13 @@ def save_files(gismo_objects, save_widget):
                              'The given directory does not exists:\n{}\n\nNo files saved!'.format(directory))
         return
     file_path_mapping = {}
-    file_id_mapping = {}
     files_to_save = []
     original_files = []
     existing_files = []
-    for gismo_object in gismo_objects:
-        file_id = gismo_object.file_id
-        original_file_path = gismo_object.file_path
+    for file_id in file_id_list:
+        original_file_path = session.get_file_path(file_id)
         save_file_path = os.path.join(directory, os.path.basename(original_file_path))
         file_path_mapping[file_id] = save_file_path
-        file_id_mapping[file_id] = gismo_object
 
         if not os.path.exists(save_file_path):
             files_to_save.append(file_id)
@@ -388,6 +385,7 @@ def save_files(gismo_objects, save_widget):
         elif os.path.exists(save_file_path):
             existing_files.append(file_id)
 
+    user = kwargs.pop('user', 'unknown user')
 
     # Check original files
     if original_files:
@@ -416,26 +414,25 @@ def save_files(gismo_objects, save_widget):
     # Save files
     if files_to_save:
         for file_id in files_to_save:
-            gismo_object = file_id_mapping[file_id]
-            gismo_object.save_file(file_path=file_path_mapping[file_id], overwrite=True)
+            session.save_file(file_id, file_path=file_path_mapping[file_id], overwrite=True, user=user)
     main_gui.show_information('Files saved!', '{} files have been saved to directory: \n {}'.format(len(files_to_save),
                                                                                                directory))
 
 
-
-
-def save_file(gismo_object, save_widget):
+def save_file(file_id=None, session=None, save_widget=None, **kwargs):
     """
-    Saves the given gismo_object using the information in save_widget
+    Saves the gismo_object corresponding the file_id to using the information in save_widget
     save_widget is a gui.SaweWidget object
-
-    :param controller:
+    :param file_id:
+    :param session:
     :param save_widget:
     :return:
     """
-    if not gismo_object:
+    if not file_id:
         main_gui.show_information('No file loaded', 'Cant save file, no file loaded.')
         return
+
+    user = kwargs.pop('user', 'unknown user')
 
     directory = save_widget.stringvar_directory.get().strip()
     file_name = save_widget.stringvar_file_name.get().strip()
@@ -443,7 +440,7 @@ def save_file(gismo_object, save_widget):
     if not all([directory, file_name]):
         main_gui.show_information('Invalid directory or filename', 'Cant save plot! Invalid directory or filename.')
         return
-    original_file_path = os.path.realpath(gismo_object.file_path)
+    original_file_path = session.get_file_path(file_id)
     if not file_name.endswith('.txt'):
         file_name = file_name + '.txt'
     output_file_path = os.path.join(directory, file_name)
@@ -451,7 +448,7 @@ def save_file(gismo_object, save_widget):
     print(original_file_path)
     if not (os.path.exists(output_file_path) and os.path.samefile(output_file_path, original_file_path)):
         try:
-            gismo_object.save_file(file_path=output_file_path)
+            session.save_file(file_id, file_path=output_file_path, user=user)
             main_gui.show_information('File saved', 'File saved to:\n{}'.format(output_file_path))
             return
         except GISMOExceptionFileExcists:
@@ -467,7 +464,7 @@ def save_file(gismo_object, save_widget):
     if not os.path.exists(directory):
         os.makedirs(directory)
     temp_file_path = directory + '/temp_%s' % file_name
-    gismo_object.save_file(file_path=temp_file_path, overwrite=True)
+    session.save_file(file_id, file_path=temp_file_path, overwrite=True, user=user)
     os.remove(output_file_path)
     shutil.copy2(temp_file_path, output_file_path)
     os.remove(temp_file_path)
@@ -746,11 +743,12 @@ def get_merge_data(controller, compare_widget, flag_widget, load_match_data=True
 ================================================================================
 """ 
 def flag_data_profile(flag_widget=None,
-                      gismo_object=None,
+                      file_id=None,
+                      session=None,
                       plot_object=None,
                       par=None):
     """
-    Flag data in the given gismo_object. 
+    Flag data in the gismo_object identified by file_id.
     Takes limits from plot_object and 
     flag information from tkw.FlagWidget.
     """
@@ -758,10 +756,6 @@ def flag_data_profile(flag_widget=None,
     selection = flag_widget.get_selection()
     flag_nr = selection.flag
     active_flags = selection.selected_flags
-
-    # if 'no flag' in active_flags:
-    #     active_flags.pop('no flag')
-    #     active_flags.append('')
 
     mark_from = plot_object.get_mark_from_value()
     mark_to = plot_object.get_mark_to_value()
@@ -775,7 +769,7 @@ def flag_data_profile(flag_widget=None,
         par_from = float(value_from)
         par_to = float(value_to)
 
-        data = gismo_object.get_data('depth', par)
+        data = session.get_data(file_id, 'depth', par)
         par_array = data[par]
 
         boolean = (par_array >= par_from) & \
@@ -785,16 +779,20 @@ def flag_data_profile(flag_widget=None,
         depth_to_flag = -data['depth'][boolean]
 
         # Flag data
-        gismo_object.flag_data(flag_nr, par, depth=depth_to_flag, flags=active_flags)
-
+        session.flag_data(file_id, flag_nr, par, depth=depth_to_flag, flags=active_flags)
     else:
         depth_max = -float(mark_from)
         depth_min = -float(mark_to)
 
         print('depth_min', depth_min)
         print('depth_max', depth_max)
+
         # Flag data
-        gismo_object.flag_data(flag_nr, par, depth_min=depth_min, depth_max=depth_max, flags=active_flags)
+        kw = {}
+        if 'qc_routine' in session.get_flag_options(file_id):
+            kw['qc_routine'] = 'Manual'
+        session.flag_data(file_id, flag_nr, par, depth_min=depth_min, depth_max=depth_max,
+                          flags=active_flags, **kw)
 
 """
 ================================================================================
@@ -1129,8 +1127,7 @@ def update_profile_plot_background(gismo_objects=[],
 
             if all(np.isnan(data[par])):
                 continue
-            prop = settings.get_flag_prop_dict(flag)
-            prop.update(selection.get_prop(flag))  # Is empty if no settings file is added while loading data
+            prop = selection.get_prop(flag)  # Is empty if no settings file is added while loading data
             prop.update({'linestyle': '',
                          'marker': '.',
                          'alpha': 0.2})
@@ -1210,8 +1207,7 @@ def update_profile_plot(gismo_object=None,
         if all(np.isnan(data[par])):
             #            print 'No data for flag "%s", will not plot.' % flag
             continue
-        prop = settings.get_flag_prop_dict(flag)
-        prop.update(selection.get_prop(flag))  # Is empty if no settings file is added while loading data
+        prop = selection.get_prop(flag)
         prop.update({'linestyle': '',
                      'marker': '.'})
 

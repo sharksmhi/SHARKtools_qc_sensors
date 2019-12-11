@@ -36,7 +36,8 @@ class RangeSelectorFloatWidget(ttk.Labelframe):
                  line_id='current_flags', 
                  plot_object=None, 
                  callback=None, 
-                 only_negative_values=False, 
+                 only_negative_values=False,
+                 max_is_min=False,
                  **kwargs):
 
         self.line_id = line_id
@@ -44,6 +45,7 @@ class RangeSelectorFloatWidget(ttk.Labelframe):
         self.plot_object = plot_object
         self.callback = callback
         self.only_negative_values = only_negative_values
+        self.max_is_min = max_is_min
         
         self.axis = axis
         self.x_list = ['x', 't']
@@ -80,7 +82,13 @@ class RangeSelectorFloatWidget(ttk.Labelframe):
         entry_width = 10
         
         #-----------------------------------------------------------------------------------------------------------
-        ttk.Button(frame, text=u'Mark max', command=self._mark_max).grid(row=r, column=0, padx=padx, pady=pady, sticky='w')
+        if self.max_is_min:
+            b1_text = 'Mark min'
+            b2_text = 'Mark max'
+        else:
+            b1_text = 'Mark max'
+            b2_text = 'Mark min'
+        ttk.Button(frame, text=b1_text, command=self._mark_max).grid(row=r, column=0, padx=padx, pady=pady, sticky='w')
         
         # Entries to display selected max values
         self.stringvar_max = tk.StringVar()
@@ -93,7 +101,7 @@ class RangeSelectorFloatWidget(ttk.Labelframe):
         r+=1        
         
         
-        ttk.Button(frame, text=u'Mark min', command=self._mark_min).grid(row=r, column=0, padx=padx, pady=pady, sticky='w')
+        ttk.Button(frame, text=b2_text, command=self._mark_min).grid(row=r, column=0, padx=padx, pady=pady, sticky='w')
         
         # Entries to display selected min values
         self.stringvar_min = tk.StringVar()
@@ -106,7 +114,7 @@ class RangeSelectorFloatWidget(ttk.Labelframe):
         r+=1
         
             
-        ttk.Button(frame, text=u'Clear mark', command=self._clear_mark).grid(row=r, column=0, padx=padx, pady=pady, sticky='w')
+        ttk.Button(frame, text='Clear mark', command=self._clear_mark).grid(row=r, column=0, padx=padx, pady=pady, sticky='w')
         
         tkw.grid_configure(frame, nr_rows=r+1, nr_columns=2)
         
@@ -1229,10 +1237,12 @@ class FilterWidgetTable(tk.Frame):
                  callback_update=None,
                  callback_select=None,
                  prop_frame={},
+                 prop_treeview={},
                  file_id_startswith='',
                  **kwargs):
         self.prop_frame = {}
         self.prop_frame.update(prop_frame)
+        self.prop_treeview = prop_treeview
         self.parent = parent
         self.parent_app = parent_app
         self.main_app = main_app
@@ -1271,6 +1281,7 @@ class FilterWidgetTable(tk.Frame):
                                             row=0,
                                             sticky='nsew',
                                             columnspan=3,
+                                            prop_treeview=self.prop_treeview,
                                             **pad)
 
         self.button_filter_data = tk.Button(self,

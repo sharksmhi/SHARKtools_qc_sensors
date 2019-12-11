@@ -45,6 +45,9 @@ class PageProfile(tk.Frame):
     def __init__(self, parent, parent_app, **kwargs):
         tk.Frame.__init__(self, parent, **kwargs)
         # parent is the frame "container" in App. contoller is the App class
+        print('PROFILE')
+        import sys
+        print(sys.path)
         self.parent = parent
         self.parent_app = parent_app
         self.main_app = self.parent_app.main_app
@@ -238,9 +241,9 @@ class PageProfile(tk.Frame):
 
     def _add_popup_menu_to_fig(self):
         items = [{'name': 'Mark min',
-                  'command': self.zrange_selection_widget._mark_min},
+                  'command': self.zrange_selection_widget._mark_max},
                  {'name': 'Mark max',
-                  'command': self.zrange_selection_widget._mark_max}]
+                  'command': self.zrange_selection_widget._mark_min}]
         self.fig_menu_popup_widget = tkw.MenuWidget(self.notebook_plot.frame_single_profile_plot,
                                                     bind_command='button_press_event',
                                                     bind_fig=self.plot_object.fig,
@@ -352,8 +355,9 @@ class PageProfile(tk.Frame):
                                                                                  session=self.session,
                                                                                  callback_update=self._callback_filter_update,
                                                                                  callback_select=self._callback_filter_select,
-                                                                                 file_id_startswith='ctd_profile',
-                                                                                 prop_frame={})
+                                                                                 file_id_startswith=['ctd_profile', 'nodc_ctd_profile'],
+                                                                                 prop_frame={},
+                                                                                 prop_treeview={'height': 3})
         tkw.grid_configure(self.labelframe_data)
 
 #         # Data file
@@ -519,16 +523,11 @@ class PageProfile(tk.Frame):
         tkw.grid_configure(frame_map_2)
         tkw.grid_configure(frame_buttons, nr_columns=2)
 
-
-        # self.map_widget_1 = tkmap.MapWidget(frame_map)
-        # self.map_widget_2 = tkmap.MapWidget(frame_options)
-
         # Get map boundries
         boundaries = self._get_map_boundaries()
 
-
-        self.map_widget_1 = tkmap.TkMap(frame_map_1, boundaries=boundaries)
-        self.map_widget_2 = tkmap.TkMap(frame_map_2, boundaries=boundaries)
+        self.map_widget_1 = tkmap.TkMap(frame_map_1, boundaries=boundaries, map_resolution='c')
+        self.map_widget_2 = tkmap.TkMap(frame_map_2, boundaries=boundaries, map_resolution='c')
 
         self.button_frame_map_1 = tk.Button(frame_buttons, text='Map window', command=self._popup_map_1)
         self.button_frame_map_1.grid(row=0, column=0, sticky='nsew', pady=5)
@@ -624,6 +623,7 @@ class PageProfile(tk.Frame):
         self.zrange_selection_widget = gui.RangeSelectorFloatWidget(frame,
                                                                     label='Depth range',
                                                                     plot_object=self.plot_object,
+                                                                    max_is_min=True,
                                                                     axis='z',
                                                                     row=r)
         tkw.grid_configure(frame, nr_rows=2)
@@ -1049,13 +1049,20 @@ class PageProfile(tk.Frame):
         tkw.grid_configure(frame, nr_rows=3)
 
     def _callback_save_file(self, *args, **kwargs):
-        gui.communicate.save_file(self.current_gismo_object, self.save_file_widget)
+        gui.communicate.save_file(file_id=self.current_file_id,
+                                  session=self.session,
+                                  save_widget=self.save_file_widget,
+                                  user=self.user.name)
+        self.user.path.set('export_directory', self.save_file_widget.get_directory())
 
     def _callback_save_all_files(self, *args, **kwargs):
-        gismo_objects = []
-        for file_id in self.select_data_widget.get_filtered_file_id_list():
-            gismo_objects.append(self.session.get_gismo_object(file_id))
-        gui.communicate.save_files(gismo_objects, self.save_all_files_widget)
+        file_id_list = self.select_data_widget.get_filtered_file_id_list()
+        gui.communicate.save_files(file_id_list=file_id_list,
+                                   session=self.session,
+                                   save_widget=self.save_file_widget,
+                                   user=self.user.name)
+
+        self.user.path.set('export_directory', self.save_all_files_widget.get_directory())
 
     def old_callback_save_html(self):
         if self.save_widget_html.has_sufficient_selections():
@@ -1219,7 +1226,8 @@ class PageProfile(tk.Frame):
             return
         try:
             gui.flag_data_profile(flag_widget=self.flag_widget,
-                                  gismo_object=self.current_gismo_object,
+                                  file_id=self.current_file_id,
+                                  session=self.session,
                                   plot_object=self.plot_object,
                                   par=self.current_parameter)
             self._update_plot_background(file_id=self.current_gismo_object.file_id)

@@ -8,16 +8,22 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
 
+
 import os
 import sys
 import socket
 
 import matplotlib.pyplot as plt
 
+import gui as main_gui
 from plugins.SHARKtools_qc_sensors import gui
 import core
+import sys
+
+import sharkpylib as spl
 
 from sharkpylib.gismo import GISMOsession
+
 
 from sharkpylib import gismo
 from sharkpylib import loglib
@@ -26,7 +32,7 @@ import sharkpylib.tklib.tkinter_widgets as tkw
 from plugins.plugin_app import PluginApp
 
 from sharkpylib.gismo.exceptions import *
-from core.exceptions import *
+from sharkpylib.file.file_handlers import SamplingTypeSettingsDirectory, MappingDirectory
 
 import threading
 
@@ -35,6 +41,7 @@ ALL_PAGES['PageStart'] = gui.PageStart
 ALL_PAGES['PageTimeSeries'] = gui.PageTimeSeries
 ALL_PAGES['PageMetadata'] = gui.PageMetadata
 ALL_PAGES['PageProfile'] = gui.PageProfile
+ALL_PAGES['PageSamplingTypeSettings'] = gui.PageSamplingTypeSettings
 ALL_PAGES['PageUser'] = gui.PageUser
 
 APP_TO_PAGE = dict()
@@ -101,26 +108,30 @@ class App(PluginApp):
 
 
         # Load paths
-        self.paths = core.Paths(self.plugin_directory)
+        # self.paths = core.Paths(self.plugin_directory)
 
         # Load settings files object
-        self.settings_files = core.SettingsFiles(self.paths.directory_settings_files)
+        # self.settings_files = core.SamplingTypeSettingsFiles(self.paths.directory_settings_files)
+        self.settings_files = SamplingTypeSettingsDirectory()
+        self.mapping_files = MappingDirectory()
 
         self.settings = self.main_app.settings
 
         self.user_manager = self.main_app.user_manager
         self.user = self.main_app.user
 
-        self.session = GISMOsession(root_directory=self.root_directory,
-                                    users_directory=self.users_directory,
-                                    log_directory=self.log_directory,
-                                    mapping_files_directory=self.paths.directory_mapping_files,
-                                    settings_files_directory=self.paths.directory_settings_files,
-                                    user=self.user.name,
-                                    sampling_types_factory=self.sampling_types_factory,
-                                    qc_routines_factory=self.qc_routines_factory,
-                                    save_pkl=False)
+        self.session = spl.gismo.GISMOsession(root_directory=self.root_directory,
+                                                users_directory=self.users_directory,
+                                                log_directory=self.log_directory,
+                                                # mapping_files_directory=self.paths.directory_mapping_files,
+                                                # settings_files_directory=self.paths.directory_settings_files,
+                                                user=self.user.name,
+                                                sampling_types_factory=self.sampling_types_factory,
+                                                qc_routines_factory=self.qc_routines_factory,
+                                                save_pkl=False)
 
+        # TODO: Add mapping directory?
+        # TODO: Add settings directory?
 
         self.default_platform_settings = None
 
@@ -317,8 +328,10 @@ class App(PluginApp):
                                                        command=lambda: self._get_data_file_path('Ferrybox CMEMS'))
         self.button_get_fixed_platform_data_file = tk.Button(frame_data, text='Fixed platform CMEMS',
                                                              command=lambda: self._get_data_file_path('Fixed platforms CMEMS'))
-        self.button_get_ctd_data_file = tk.Button(frame_data, text='SHARK CTD standard format',
-                                                  command=lambda: self._get_data_file_paths('CTD SHARK'))
+        self.button_get_ctd_data_file = tk.Button(frame_data, text='DV CTD standard format',
+                                                  command=lambda: self._get_data_file_paths('CTD DV'))
+        self.button_get_ctd_nodc_data_file = tk.Button(frame_data, text='NODC CTD standard format',
+                                                  command=lambda: self._get_data_file_paths('CTD NODC'))
         self.button_get_sampling_file = tk.Button(frame_data, text='SHARKweb bottle data',
                                                   command=lambda: self._get_data_file_path('PhysicalChemical SHARK'))
 
@@ -326,27 +339,26 @@ class App(PluginApp):
         
         self.stringvar_data_file = tk.StringVar()
         self.entry_data_file = tk.Entry(frame_data, textvariable=self.stringvar_data_file, state='disabled')
-        
-        
+
         # Grid 
         padx=5
         pady=5
         self.button_get_ferrybox_data_file.grid(row=0, column=0, padx=padx, pady=pady, sticky='nsew')
         self.button_get_fixed_platform_data_file.grid(row=0, column=1, padx=padx, pady=pady, sticky='nsew')
         self.button_get_ctd_data_file.grid(row=0, column=2, padx=padx, pady=pady, sticky='nsew')
-        self.button_get_sampling_file.grid(row=0, column=3, padx=padx, pady=pady, sticky='nsew')
+        self.button_get_ctd_nodc_data_file.grid(row=0, column=3, padx=padx, pady=pady, sticky='nsew')
+        self.button_get_sampling_file.grid(row=0, column=4, padx=padx, pady=pady, sticky='nsew')
         
         self.entry_data_file.grid(row=1, column=0, columnspan=5, padx=padx, pady=pady, sticky='nsew')
-        
-        
-        # Gridconfigure 
-        tkw.grid_configure(frame_data, nr_rows=2, nr_columns=4)
 
-        #----------------------------------------------------------------------
+        # Grid configure
+        tkw.grid_configure(frame_data, nr_rows=2, nr_columns=5)
+
         # Settings frame
         self.combobox_widget_settings_file = tkw.ComboboxWidget(frame_settings,
                                                                 items=[],
                                                                 title='',
+                                                                callback_target=self._save_type_and_file,
                                                                 prop_combobox={'width': 40},
                                                                 column=0,
                                                                 columnspan=1,
@@ -363,6 +375,7 @@ class App(PluginApp):
         self.combobox_widget_sampling_type = tkw.ComboboxWidget(frame_sampling_type, 
                                                                 items=sorted(self.session.get_sampling_types()),
                                                                 title='',
+                                                                callback_target=self._save_type_and_file,
                                                                 prop_combobox={'width': 30},
                                                                 column=0, 
                                                                 columnspan=1, 
@@ -416,18 +429,20 @@ class App(PluginApp):
 
     def _get_data_file_paths(self, sampling_type):
 
-        open_directory = self._get_open_directory()
+        open_directory = self.get_open_directory(sampling_type)
         file_paths = filedialog.askopenfilenames(initialdir=open_directory,
                                                  filetypes=[('GISMO-file ({})'.format(sampling_type), '*.txt')])
 
         if file_paths:
-            self._set_open_directory(file_paths[0])
+            self.set_open_directory(file_paths[0], sampling_type)
             old_sampling_type = self.combobox_widget_sampling_type.get_value()
             self.combobox_widget_sampling_type.set_value(sampling_type)
             file_path_list = []
             for file_path in file_paths:
                 file_name = os.path.basename(file_path)
-                if sampling_type == 'CTD SHARK' and not file_name.startswith('ctd_profile_'):
+                if sampling_type == 'CTD DV' and not file_name.startswith('ctd_profile_'):
+                    continue
+                if sampling_type == 'CTD NODC' and not file_name.startswith('nodc_ctd_profile_'):
                     continue
                 if not file_path_list:
                     file_path_list.append(file_path)
@@ -436,38 +451,56 @@ class App(PluginApp):
 
             self.stringvar_data_file.set('; '.join(file_path_list))
 
-        self._set_settings(sampling_type, file_paths[0])
+            self._set_settings(sampling_type, file_paths[0])
 
     def _get_data_file_path(self, sampling_type):
         """
         Created     20180821
         """
-        open_directory = self._get_open_directory()
+        open_directory = self.get_open_directory(sampling_type)
         file_path = filedialog.askopenfilename(initialdir=open_directory,
                                                filetypes=[('GISMO-file ({})'.format(sampling_type), '*.txt')])
 
         if file_path:
-            self._set_open_directory(file_path)
+            self.set_open_directory(file_path, sampling_type)
             old_sampling_type = self.combobox_widget_sampling_type.get_value() 
             self.combobox_widget_sampling_type.set_value(sampling_type)
             self.stringvar_data_file.set(file_path)
 
         self._set_settings(sampling_type, file_path)
 
+    def _save_type_and_file(self):
+        if not self.latest_loaded_sampling_type:
+            return
+        s_type = self.combobox_widget_sampling_type.get_value()
+        if s_type:
+            self.user.file_type.set(self.latest_loaded_sampling_type, 'sampling_type', s_type)
+
+        s_file = self.combobox_widget_settings_file.get_value()
+        if s_file:
+            self.user.file_type.set(self.latest_loaded_sampling_type, 'settings_file', s_file)
+
     def _set_settings(self, sampling_type, file_path):
         if file_path:
             # Check settings file path
             # settings_file_path = self.combobox_widget_settings_file.get_value()
-            print(self.settings['directory']['Default {} settings'.format(sampling_type)])
-            self.combobox_widget_settings_file.set_value(self.settings['directory']['Default {} settings'.format(sampling_type)])
+            # try:
+            #     self.combobox_widget_settings_file.set_value(self.settings['directory']['Default {} settings'.format(sampling_type)])
+            # except:
+            #      pass
 
             # User settings
+            # Sampling type
             self.latest_loaded_sampling_type = sampling_type
-            user_settings_file = self.user.settingsfile.get(sampling_type)
-            if user_settings_file:
-                self.combobox_widget_settings_file.set_value(user_settings_file)
+            s_type = self.user.file_type.setdefault(sampling_type, 'sampling_type', '')
+            if s_type:
+                self.combobox_widget_sampling_type.set_value(s_type)
 
-            self.button_load_file.configure(state='normal')
+            # Settings file
+            s_file = self.user.file_type.setdefault(sampling_type, 'settings_file', '')
+            if s_file:
+                self.combobox_widget_settings_file.set_value(s_file)
+
             self.info_popup.show_information(core.texts.data_file_selected(username=self.user.name))
 
             if 'fixed platform' in sampling_type.lower():
@@ -478,6 +511,8 @@ class App(PluginApp):
             else:
                 self.entry_widget_platform_depth.set_value('')
                 self.entry_widget_platform_depth.disable_widget()
+
+            self.button_load_file.configure(state='normal')
         else:
             self.button_load_file.configure(state='disabled')
             self.entry_widget_platform_depth.set_value('')
@@ -486,25 +521,33 @@ class App(PluginApp):
     #===========================================================================
     def _import_settings_file(self):
 
-        open_directory = self._get_open_directory()
+        open_directory = self.get_open_directory()
             
         file_path = filedialog.askopenfilename(initialdir=open_directory, 
                                                 filetypes=[('GISMO Settings file','*.ini')])
-        self._set_open_directory(file_path)
+        if not file_path:
+            return
+        self.set_open_directory(file_path)
 
         self.settings_files.import_file(file_path)
         self._update_settings_combobox_widget()
 
-    def _get_open_directory(self):
-        return self.user.path.setdefault('open_directory', self.settings['directory']['Input directory'])
+    def get_open_directory(self, suffix=None):
+        if suffix:
+            string = f'open_directory_{suffix.replace(" ", "_")}'
+        else:
+            string = 'open_directory'
+        return self.user.path.setdefault(string, self.settings['directory']['Input directory'])
 
-    def _set_open_directory(self, directory):
+    def set_open_directory(self, directory, suffix=None):
         if os.path.isfile(directory):
             directory = os.path.dirname(directory)
-        self.user.path.set('open_directory', directory)
+        if suffix:
+            string = f'open_directory_{suffix.replace(" ", "_")}'
+        else:
+            string = 'open_directory'
+        self.user.path.set(string, directory)
 
-
-    #===========================================================================
     def _load_file(self):
 
         def load_file(data_file_path, **kwargs):
@@ -512,7 +555,6 @@ class App(PluginApp):
             self.button_load_file.configure(state='disabled')
 
             settings_file = self.combobox_widget_settings_file.get_value()
-            settings_file_path = self.settings_files.get_path(settings_file)
             sampling_type = self.combobox_widget_sampling_type.get_value()
 
             self.session.load_file(sampling_type=sampling_type,
@@ -540,7 +582,7 @@ class App(PluginApp):
             data_file_list = []
             for k, file_name in enumerate(data_file_path.split(';')):
                 file_name = file_name.strip()
-                if k==0:
+                if k == 0:
                     directory = os.path.dirname(file_name)
                     data_file_list.append(file_name)
                 else:
@@ -554,7 +596,7 @@ class App(PluginApp):
                 load_file(file_path)
                 # self.run_progress(load_file, message='Loading file...please wait...')
             except GISMOExceptionMissingPath as e:
-                gui.show_information('Invalid path',
+                main_gui.show_information('Invalid path',
                                      'The path "{}" given in i settings file "{} can not be found'.format(e.message,
                                                                                                           settings_file_path))
                 self.update_help_information('Please try again with a different settings file.')
@@ -564,14 +606,9 @@ class App(PluginApp):
                 if 'depth' in e.message:
                     platform_depth = self.entry_widget_platform_depth.get_value()
                     if not platform_depth:
-                        gui.show_information('No depth found!', 'You need to provide platform depth for this sampling type!')
+                        main_gui.show_information('No depth found!', 'You need to provide platform depth for this sampling type!')
                         return
                     load_file(file_path, depth=platform_depth)
-
-        # Update user settings
-        if self.latest_loaded_sampling_type:
-            self.user.settingsfile.set(self.latest_loaded_sampling_type,
-                                       self.combobox_widget_settings_file.get_value())
 
         # Remove data file text
         self.stringvar_data_file.set('')
@@ -671,37 +708,6 @@ class App(PluginApp):
                 # print('page_name', page_name)
                 frame.update_page()
 
-
-    def _update_menubar_users(self):
-        # delete old entries
-        for k in range(100):
-            try:
-                self.user_menu.delete(0)
-            except:
-                break
-        # Add items
-
-        # User settings
-        self.user_menu.add_command(label='User settings',
-                                   command=lambda: self.show_frame(gui.PageUser))
-        self.user_menu.add_separator()
-
-        # All users
-        for user in self.user_manager.get_user_list():
-            self.user_menu.add_command(label='Change to user: {}'.format(user),
-                                       command=lambda x=user: self._change_user(x))
-        self.user_menu.add_separator()
-
-        # New user
-        self.user_menu.add_command(label='Create new user',
-                                   command=self._create_new_user)
-
-        # Import user
-        # self.user_menu.add_command(label='Import user',
-        #                            command=None)
-
-
-
     #===========================================================================
     def show_frame(self, page_name):
         """
@@ -716,7 +722,6 @@ class App(PluginApp):
         if not self.pages_started.get(page_name, None):
             frame.startup()
             self.pages_started[page_name] = True
-        frame.update_page()
 
         #-----------------------------------------------------------------------
         if load_page:
