@@ -1029,7 +1029,10 @@ def update_time_series_plot(gismo_object=None,
     print('par', par)
     print('data', check_data[par])
     print('no', len(np.where(~np.isnan(check_data[par]))[0]))
-    print('yes', len(np.where(np.isnan(check_data[par]))[0]))
+    nr_data = len(np.where(np.isnan(check_data[par]))[0])
+    print('yes', nr_data)
+    if not nr_data:
+        raise GISMOExceptionNoData
     print('selection.selected_flags', selection.selected_flags)
 
     

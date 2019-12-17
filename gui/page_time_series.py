@@ -1133,12 +1133,16 @@ class PageTimeSeries(tk.Frame):
         if not self._check_loaded_data():
             return
 
-        gui.update_time_series_plot(gismo_object=self.current_gismo_object,
-                                    par=self.current_parameter,
-                                    plot_object=self.plot_object,
-                                    flag_widget=self.flag_widget,
-                                    help_info_function=self.parent_app.update_help_information,
-                                    call_targets=kwargs.get('call_targets', True))
+        try:
+            gui.update_time_series_plot(gismo_object=self.current_gismo_object,
+                                        par=self.current_parameter,
+                                        plot_object=self.plot_object,
+                                        flag_widget=self.flag_widget,
+                                        help_info_function=self.parent_app.update_help_information,
+                                        call_targets=kwargs.get('call_targets', True))
+        except GISMOExceptionNoData as e:
+            main_gui.show_information('No data found!', f'No data in file for parameter: {self.current_parameter}')
+            return
 
         try:
             self.plot_object.set_title(self.current_gismo_object.get_station_name())
