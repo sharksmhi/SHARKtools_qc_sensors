@@ -1388,8 +1388,6 @@ class PageTimeSeries(tk.Frame):
 
                 map_widget.set_title(title, position=title_position)
 
-
-
     def _update_map_2(self, *args, **kwargs):
         title_position = [0.5, 1.05]
         if args:
