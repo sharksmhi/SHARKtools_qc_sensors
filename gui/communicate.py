@@ -326,7 +326,7 @@ def run_automatic_qc(controller, automatic_qc_widget):
                'This might take some time. ' \
                'Do you want to continue?'
     else:
-        text = 'You are about tu run {} automatic quality controles. ' \
+        text = 'You are about to run {} automatic quality controls. ' \
                'This might take some time. ' \
                'Do you want to continue?'.format(nr_routines)
 
@@ -807,7 +807,7 @@ def update_range_selection_widget(plot_object=None,
     """
     Updates entries in range_selection_widget. 
     This is to get live update from the plot when "mark range" is active.
-    line_id='current_flags' indicates that alla flags that are ploted are taken into consideration. 
+    line_id='current_flags' indicates that alla flags that are plotted are taken into consideration.
     """
     # TODO: Not sure "time_axis" is used here!
     logging.debug('IN: update_range_selection_widget')
@@ -875,7 +875,7 @@ def update_range_selection_widget(plot_object=None,
 ================================================================================
 ================================================================================
 """ 
-def update_profile_plot(profiles=None, 
+def old_update_profile_plot(profiles=None,
                         par=None, 
                         plot_object=None, 
                         flag_widget=None, 
@@ -1013,8 +1013,7 @@ def update_time_series_plot(gismo_object=None,
     
     if help_info_function:
         help_info_function('Updating time series plot...please wait...')
-    
-    settings = gismo_object.settings
+
     selection = flag_widget.get_selection()
 
     # Clear old data from plot
@@ -1028,6 +1027,7 @@ def update_time_series_plot(gismo_object=None,
     check_data = gismo_object.get_data(par)
     print('='*30)
     print('par', par)
+    print('data', check_data[par])
     print('no', len(np.where(~np.isnan(check_data[par]))[0]))
     print('yes', len(np.where(np.isnan(check_data[par]))[0]))
     print('selection.selected_flags', selection.selected_flags)
@@ -1042,24 +1042,16 @@ def update_time_series_plot(gismo_object=None,
 
     plot_object.set_data(x=data['time'], y=data[par], line_id='current_flags', call_targets=call_targets, **prop)
 
-    # if par in ['time', 'lat', 'lon']:
-    #
-    #     plot_object.set_data(x=data['time'], y=data[par], line_id='current_flags', **prop)
-    #     if help_info_function:
-    #         help_info_function('Done!')
-    #     return
-
     # Plot individual flags
     for k, flag in enumerate(selection.selected_flags):
 
         data = gismo_object.get_data('time', par, mask_options={'include_flags': [flag]})
 
-
         if all(np.isnan(data[par])):
 #            print 'No data for flag "%s", will not plot.' % flag
             continue
-        prop = settings.get_flag_prop_dict(flag)
-        prop.update(selection.get_prop(flag))  # Is empty if no settings file is added while loading data
+
+        prop = selection.get_prop(flag)
         prop.update({'linestyle': '',
                      'marker': '.'})
 
@@ -1107,7 +1099,6 @@ def update_profile_plot_background(gismo_objects=[],
         plot_object.reset_plot()
 
     for gismo_object in gismo_objects:
-        settings = gismo_object.settings
         selection = flag_widget.get_selection()
 
         # Set labels
@@ -1161,7 +1152,6 @@ def update_profile_plot(gismo_object=None,
     if help_info_function:
         help_info_function('Updating profile plot...please wait...')
 
-    settings = gismo_object.settings
     selection = flag_widget.get_selection()
 
     # Clear old data from plot

@@ -483,15 +483,11 @@ class PageProfile(tk.Frame):
 
         for qc_routine in self.qc_routine_widget.get_selected_qc_routines():
             options = self.user.qc_routine_options.get_settings(par=qc_routine)
-            gismo_object_list = []
-            for file_id in file_id_list:
-                gismo_object = self.session.get_gismo_object(file_id)
-                if qc_routine in gismo_object.valid_qc_routines:
-                    gismo_object_list.append(gismo_object)
-            # self.session.run_automatic_qc(gismo_objects=gismo_object_list, qc_routine=qc_routine, **options)
             # Run QC with matching file_id and qc_routines
             try:
-                self.session.run_automatic_qc(gismo_objects=gismo_object_list, qc_routine=qc_routine, **options)
+                self.session.run_automatic_qc(file_id=file_id_list, qc_routine=qc_routine, **options)
+            except ImportError as e:
+                main_gui.show_error('Import error', e)
 
             except GISMOExceptionMissingInputArgument as e:
                 if 'parameter' in e.message and 'list' in e.message:
@@ -500,7 +496,7 @@ class PageProfile(tk.Frame):
                     gui_logger.warning(e)
                 elif 'save' in e.message and 'directory' in e.message:
                     main_gui.show_warning('Invalid save directory', 'It seems like the saving directory for QC routine {} '
-                                                               'is not valid. Please open option ans change or update '
+                                                               'is not valid. Please open option and change or update '
                                                                'directory.'.format(qc_routine))
                     gui_logger.warning(e)
                 else:
@@ -1059,7 +1055,7 @@ class PageProfile(tk.Frame):
         file_id_list = self.select_data_widget.get_filtered_file_id_list()
         gui.communicate.save_files(file_id_list=file_id_list,
                                    session=self.session,
-                                   save_widget=self.save_file_widget,
+                                   save_widget=self.save_all_files_widget,
                                    user=self.user.name)
 
         self.user.path.set('export_directory', self.save_all_files_widget.get_directory())

@@ -106,6 +106,7 @@ class PageSamplingTypeSettings(tk.Frame):
         file_base = map_data.get('file_name', None)
 
         if file_base not in self.par_map_combobox_file.items:
+            main_gui.show_warning('Fil saknas', file_base)
             raise GISMOExceptionInvalidFileId(file_base)
         self.par_map_combobox_file.set_value(file_base)
         self._on_select_parameter_mapping_file()
@@ -188,7 +189,6 @@ class PageSamplingTypeSettings(tk.Frame):
                                                  items=self.settings_files.get_list(),
                                                  callback_target=self._on_select_file,
                                                  **opt)
-
         frame_save = tk.Frame(frame)
         frame_save.grid(row=0, column=1, **opt)
 
@@ -201,6 +201,9 @@ class PageSamplingTypeSettings(tk.Frame):
         self.button_save_as.grid(row=0, column=1, **opt)
 
         tkw.grid_configure(frame_save, nr_rows=0, nr_columns=2)
+
+        self.combobox_files.set_value(self.user.sampling_type_settings.setdefault('show_file',
+                                                                                  self.settings_files.get_list()[0]))
 
     def _set_labelframe_dependent_parameters(self):
         frame = self.frame_dependent_parameters
@@ -489,7 +492,7 @@ class PageSamplingTypeSettings(tk.Frame):
         self._update_listbox_selection_widget_dependent_parameters()
 
     def _on_select_file(self):
-        print('Select file')
+        self.user.sampling_type_settings.set('show_file', self.combobox_files.get_value())
         self._update_settings_object()
         self.update_page()
 
@@ -556,10 +559,13 @@ class PageSamplingTypeSettings(tk.Frame):
         self.combobox_files.update_items(sorted(self.settings_files.get_list()))
 
     def _update_settings_object(self):
-        file_name = self.combobox_files.get_value()
-        file_path = self.settings_files.get_path(file_name)
-        directory = os.path.dirname(file_path)
-        self.settings_object = SamplingTypeSettings(file_name, directory=directory)
+        file_id = self.combobox_files.get_value()
+        # file_path = self.settings_files.get_path(file_name)
+        # directory = os.path.dirname(file_path)
+        self.settings_object = self.settings_files.get_file_object(file_id,
+                                                                   directory=SETTINGS_FILES_DIRECTORY,
+                                                                   use_class=SamplingTypeSettings)
+        # self.settings_object = SamplingTypeSettings(file_name, directory=directory)
 
     def _update_listbox_selection_widget_dependent_parameters(self):
         """
@@ -588,22 +594,24 @@ class PageSamplingTypeSettings(tk.Frame):
         self.user.sampling_type_settings.set('parameter_list', all_pars)
     
     def _load_parameter_file(self):
-        open_directory = self.parent_app.get_open_directory()
+        default_directory = spl.file.file_handlers.ListDirectory().main_directory
+        open_directory = self.user.directory.setdefault('parameter_file', default_directory)
         file_path = filedialog.askopenfilename(initialdir=open_directory,
                                                filetypes=[('Parameter file', '*.txt')])
         if not file_path:
             return
-        file_par_list = spl.file_io.get_list_from_file(file_path=file_path)
+        file_par_list = spl.file.get_list_from_file(file_path=file_path)
         self._save_parameter_list_to_user(file_par_list, include_current=True)
         # self._update_listbox_parameters()
-        self.parent_app.set_open_directory(file_path)
+        self.user.directory.set('parameter_file', open_directory)
+        # self.parent_app.set_open_directory(file_path)
         self._on_select_dependent_parameter()
 
     def _remove_dependent_parameter(self):
         parameter = self.combobox_widget_dependent_parameters.get_value()
         self.combobox_widget_dependent_parameters.delete_item(parameter)
         # Delete in settings
-        self.settings_object.delete_data('dependent_parameters', parameter)
+        self.settings_object.remove_data('dependent_parameters', parameter)
 
     def _add_dependent_parameter(self):
         def _add_parameter():
@@ -652,11 +660,17 @@ class PageSamplingTypeSettings(tk.Frame):
         tkw.grid_configure(popup_frame, nr_rows=3, nr_columns=2)
 
     def _save_file(self):
+        file_id = self.settings_object.file_id
         try:
-            self.settings_object.save()
+            self.settings_files.save_file(file_id)
+            # self.settings_object.save()
         except GISMOExceptionSaveNotAllowed as e:
             main_gui.show_warning('Saving Sampling type settings',
-                                  f'Not allowed to overwrite file {self.settings_object.file_name}. '
+                                  f'Not allowed to overwrite file {file_id}. '
+                                  f'Please save with a different name!')
+        except FileExistsError as e:
+            main_gui.show_warning('Saving Sampling type settings',
+                                  f'Not allowed to overwrite file {file_id}. '
                                   f'Please save with a different name.')
 
     def _save_file_as(self):
@@ -672,16 +686,17 @@ class PageSamplingTypeSettings(tk.Frame):
                     return
             try:
                 self.settings_object.file_name = (file_name, SETTINGS_FILES_DIRECTORY)  # Setter method
-                self.settings_object.save()
                 # Update Settings files object
                 self.settings_files.add_directory(SETTINGS_FILES_DIRECTORY)  # This will update files
+                self.settings_object.save()
                 # Update combobox
                 self._update_combobox_files()
                 self.combobox_files.set_value(file_name)
+                self.user.sampling_type_settings.setdefault('show_file', file_name)
             except GISMOExceptionSaveNotAllowed:
                 main_gui.show_warning('Saving Sampling type settings',
                                       f'Not allowed to overwrite file {self.settings_object.file_name}. '
-                                      f'Please save with a different name.')
+                                      f'Please save with a different name. ')
             except GUIException as e:
                 main_gui.show_error('Save file', '{}\nSomething went wrong Try again!'.format(e.message))
             popup_frame.destroy()

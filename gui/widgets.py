@@ -1212,7 +1212,7 @@ class QCroutineOptionsPopup(object):
                 # Saved in different user settings
                 self.user.directory.set('save_directory_qc', value)
                 # self.user.qc_routine_options.set(self.qc_routine, key, value)
-                continue
+            print(self.qc_routine, '=>', key, '=>', value)
             self.user.qc_routine_options.set(self.qc_routine, key, value)
 
     def _exit(self, event=None, **kwargs):
@@ -1696,10 +1696,10 @@ class QCroutineOptionsWidget(tk.Frame):
             r+=1
         tkw.grid_configure(self, nr_rows=r)
 
-
     def get_options(self):
         options_dict = {}
         for key in sorted(self.options):
+            print('KEY =>', key)
             options_dict[key] = self.widgets[key].get_value()
         print('options_dict', options_dict)
         return options_dict

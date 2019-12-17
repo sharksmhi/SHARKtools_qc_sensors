@@ -412,8 +412,8 @@ class PageTimeSeries(tk.Frame):
         boundaries = self._get_map_boundaries()
 
 
-        self.map_widget_1 = tkmap.TkMap(frame_map_1, boundaries=boundaries)
-        self.map_widget_2 = tkmap.TkMap(frame_map_2, boundaries=boundaries)
+        self.map_widget_1 = tkmap.TkMap(frame_map_1, boundaries=boundaries, map_resolution='c')
+        self.map_widget_2 = tkmap.TkMap(frame_map_2, boundaries=boundaries, map_resolution='c')
 
         self.button_frame_map_1 = tk.Button(frame_buttons, text='Map window', command=self._popup_map_1)
         self.button_frame_map_1.grid(row=0, column=0, sticky='nsew', pady=5)

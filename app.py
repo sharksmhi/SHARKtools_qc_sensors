@@ -565,7 +565,6 @@ class App(PluginApp):
                                    root_directory=self.root_directory,
                                    **kwargs)
 
-
         self.reset_help_information()
         data_file_path = self.stringvar_data_file.get()
         settings_file = self.combobox_widget_settings_file.get_value()
@@ -606,9 +605,18 @@ class App(PluginApp):
                 if 'depth' in e.message:
                     platform_depth = self.entry_widget_platform_depth.get_value()
                     if not platform_depth:
-                        main_gui.show_information('No depth found!', 'You need to provide platform depth for this sampling type!')
+                        main_gui.show_information('No depth found!',
+                                                  'You need to provide platform depth for this sampling type!')
                         return
                     load_file(file_path, depth=platform_depth)
+            except GISMOExceptionInvalidParameter as e:
+                main_gui.show_information('Invalid parameter',
+                                          f'Could not find parameter {e}. Settings file might have wrong information.')
+                return
+            except GISMOExceptionQCfieldError:
+                main_gui.show_information('QC field error',
+                                          f'Something is wrong with the qf columns in file: {file_path}')
+                return
 
         # Remove data file text
         self.stringvar_data_file.set('')

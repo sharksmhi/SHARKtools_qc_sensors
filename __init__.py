@@ -39,5 +39,7 @@ USER_SETTINGS = [('basic', 'filter'),
                  ('parameter', 'range'),
                  ('basic', 'sampling_depth'),
                  ('basic', 'sampling_type_settings'),
-                 ('parameter', 'file_type')]
+                 ('parameter', 'file_type'),
+                 ('basic', 'save'),
+                 ('basic', 'directory')]
 
