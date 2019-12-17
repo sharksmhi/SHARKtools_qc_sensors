@@ -935,13 +935,18 @@ class PageTimeSeries(tk.Frame):
         tkw.grid_configure(frame, nr_rows=3)
 
     def _callback_save_file(self, *args, **kwargs):
-        gui.communicate.save_file(self, self.current_gismo_object, self.save_file_widget)
+        try:
+            gui.communicate.save_file(file_id=self.current_file_id,
+                                      session=self.session,
+                                      save_widget=self.save_file_widget)
+        except Exception as e:
+            main_gui.show_warning('Save file', f'Something went wrong when trying to save file: {e}')
 
     def _callback_save_html(self):
         if self.save_widget_html.has_sufficient_selections():
             self.parent_app.run_progress(self._save_html, 'Saving plots...')
         else:
-            gui.show_information('Missing selection', 'You did not provide enough information for plotting htlm plots.')
+            main_gui.show_information('Missing selection', 'You did not provide enough information for plotting htlm plots.')
 
     def _save_html(self):
         gui.communicate.save_html_plot(self, self.save_widget_html, flag_widget=self.flag_widget,
