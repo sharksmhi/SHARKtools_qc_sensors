@@ -614,9 +614,13 @@ class App(PluginApp):
                                           f'Could not find parameter {e}. Settings file might have wrong information.')
                 return
             except GISMOExceptionQCfieldError:
-                main_gui.show_information('QC field error',
+                main_gui.show_error('QC field error',
                                           f'Something is wrong with the qf columns in file: {file_path}')
                 return
+            except Exception as e:
+                main_gui.show_internal_error(e)
+                return
+
 
         # Remove data file text
         self.stringvar_data_file.set('')
