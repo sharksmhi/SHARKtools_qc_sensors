@@ -5,13 +5,11 @@
 import tkinter as tk
 from tkinter import ttk
 
-import core
-
+import matplotlib.pyplot as plt
 import sharkpylib.tklib.tkinter_widgets as tkw
 from sharkpylib import utils
 
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
+import core
 
 """
 ================================================================================
@@ -30,7 +28,6 @@ class PageUser(tk.Frame):
         self.user_manager = parent_app.user_manager
         self.user = self.user_manager.user
         self.session = parent_app.session
-        self.settings = parent_app.settings
 
         self.color_list = utils.ColorsList()
         self.marker_list = utils.MarkerList()

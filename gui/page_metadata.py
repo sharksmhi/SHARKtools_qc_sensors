@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import tkinter as tk
 
-
 import sharkpylib.tklib.tkinter_widgets as tkw
 
 from plugins.SHARKtools_qc_sensors import gui
@@ -27,7 +26,6 @@ class PageMetadata(tk.Frame):
         self.user_manager = controller.user_manager
         self.user = self.user_manager.user
         self.session = controller.session
-        self.settings = controller.settings
 
     #===========================================================================
     def startup(self):
@@ -47,7 +45,7 @@ class PageMetadata(tk.Frame):
         self.combobox_metadata_files.update_items(file_id_list)
         if current_file_id in file_id_list:
             self.combobox_metadata_files.set_value(current_file_id)
-        else:
+        elif file_id_list:
             self.combobox_metadata_files.set_value(file_id_list[0])
         self._update_treeview()
 

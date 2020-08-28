@@ -4,37 +4,23 @@
 # To use basemap you might need to install Microsoft Visual C++: https://visualstudio.microsoft.com/visual-cpp-build-tools/
 
 
-import tkinter as tk 
-from tkinter import ttk
-from tkinter import filedialog
-
-
 import os
-import sys
-import socket
+import threading
+import tkinter as tk
+from tkinter import filedialog
+from tkinter import ttk
 
 import matplotlib.pyplot as plt
+import sharkpylib as spl
+import sharkpylib.tklib.tkinter_widgets as tkw
+from sharkpylib import gismo
+from sharkpylib.file.file_handlers import SamplingTypeSettingsDirectory, MappingDirectory
+from sharkpylib.gismo.exceptions import *
 
+import core
 import gui as main_gui
 from plugins.SHARKtools_qc_sensors import gui
-import core
-import sys
-
-import sharkpylib as spl
-
-from sharkpylib.gismo import GISMOsession
-
-
-from sharkpylib import gismo
-from sharkpylib import loglib
-import sharkpylib.tklib.tkinter_widgets as tkw
-
 from plugins.plugin_app import PluginApp
-
-from sharkpylib.gismo.exceptions import *
-from sharkpylib.file.file_handlers import SamplingTypeSettingsDirectory, MappingDirectory
-
-import threading
 
 ALL_PAGES = dict()
 ALL_PAGES['PageStart'] = gui.PageStart
@@ -52,12 +38,12 @@ for page_name, page in ALL_PAGES.items():
 class App(PluginApp):
     """
     This class contains the main window (page), "container", for 
-    the GISMOtoolbox application.
+    the SHARKtools application.
     Additional pages in the application are stored under self.frames. 
     The container is the parent frame that is passed to other pages.
     self is also passed to the other pages objects and should there be given the name
     "self.main_app". 
-    Toolboxsettings and logfile can be reached in all page objects by calling
+    Toolbox settings and logfile can be reached in all page objects by calling
     "self.main_app.settings" and "self.main_app.logfile" respectivly. 
     """
     
@@ -84,8 +70,6 @@ class App(PluginApp):
         """
         Updated 20181002
         """
-
-        # TODO: Dynamically load the factories so that you can select another one at start up (or in a directory)
         self.sampling_types_factory = gismo.sampling_types.PluginFactory()
         self.qc_routines_factory = gismo.qc_routines.PluginFactory()
 
@@ -93,29 +77,13 @@ class App(PluginApp):
         if not os.path.exists(self.log_directory):
             os.makedirs(self.log_directory)
 
-
-        self.logger = loglib.get_logger(name='gismo_qc',
-                                        logfiles=[dict(level='DEBUG',
-                                                       file_path=os.path.join(self.log_directory,
-                                                                              'gismo_qc_debug.log')),
-                                                  dict(level='WARNING',
-                                                       file_path=os.path.join(self.log_directory,
-                                                                              'gismo_qc_warning.log')),
-                                                  dict(level='ERROR',
-                                                       file_path=os.path.join(self.log_directory,
-                                                                              'gismo_qc_error.log'))
-                                                  ])
-
-
-        # Load paths
-        # self.paths = core.Paths(self.plugin_directory)
+        self.logger = self.main_app.logger
 
         # Load settings files object
-        # self.settings_files = core.SamplingTypeSettingsFiles(self.paths.directory_settings_files)
         self.settings_files = SamplingTypeSettingsDirectory()
         self.mapping_files = MappingDirectory()
 
-        self.settings = self.main_app.settings
+        # self.settings = self.main_app.settings
 
         self.user_manager = self.main_app.user_manager
         self.user = self.main_app.user
@@ -123,15 +91,10 @@ class App(PluginApp):
         self.session = spl.gismo.GISMOsession(root_directory=self.root_directory,
                                                 users_directory=self.users_directory,
                                                 log_directory=self.log_directory,
-                                                # mapping_files_directory=self.paths.directory_mapping_files,
-                                                # settings_files_directory=self.paths.directory_settings_files,
                                                 user=self.user.name,
                                                 sampling_types_factory=self.sampling_types_factory,
                                                 qc_routines_factory=self.qc_routines_factory,
                                                 save_pkl=False)
-
-        # TODO: Add mapping directory?
-        # TODO: Add settings directory?
 
         self.default_platform_settings = None
 
@@ -149,19 +112,17 @@ class App(PluginApp):
 
         self._set_frame()
 
-
         self.startup_pages()
-        
-        
+
         # Show start page given in settings.ini
         self.page_history = ['PageUser']
         self.show_frame('PageStart')
 
     def update_page(self):
         self.user = self.user_manager.user
+        default_plot_style = self.user_manager.get_app_settings('default', 'plot style', 'seaborn')
         plt.style.use(self.user.layout.setdefault('plotstyle', self.user.layout.setdefault('plotstyle',
-                                                                                           self.settings['default'][
-                                                                                               'plotstyle'])))
+                                                                                           default_plot_style)))
         self.update_all()
 
     #==========================================================================
@@ -170,7 +131,6 @@ class App(PluginApp):
         self.frame_mid = tk.Frame(self)
         self.frame_bot = tk.Frame(self)
 
-        
         # Grid
         self.frame_top.grid(row=0, column=0, sticky="nsew")
         self.frame_mid.grid(row=1, column=0, sticky="nsew")
@@ -210,14 +170,10 @@ class App(PluginApp):
     def _set_frame_bot(self):
         self.frame_info = tk.Frame(self.frame_bot)
         self.frame_info.grid(row=0, column=0, sticky="nsew")
-
-        # ttk.Separator(self.frame_bot, orient=tk.VERTICAL).grid(row=0, column=1, sticky='ns')
-
         self.frame_progress = tk.Frame(self.frame_bot)
-        # self.frame_progress.grid(row=0, column=2, sticky="nsew")
         self.progress_widget = tkw.ProgressbarWidget(self.frame_progress, sticky='nsew')
 
-        self.info_widget = tkw.LabelFrameLabel(self.frame_info, pack=False)
+        # self.info_widget = tkw.LabelFrameLabel(self.frame_info, pack=False)
 
         tkw.grid_configure(self.frame_info)
 
@@ -229,7 +185,7 @@ class App(PluginApp):
             self.progress_widget.run_progress(run_function, message=message)
 
         if self.progress_running:
-            gui.show_information('Progress is running', 'A progress is running, please wait until it is finished!')
+            main_gui.show_information('Progress is running', 'A progress is running, please wait until it is finished!')
             return
         self.progress_running = True
         # run_thread = lambda: self.progress_widget.run_progress(run_function, message=message)
@@ -248,12 +204,11 @@ class App(PluginApp):
             self.progress_widget_toplevel = tkw.ProgressbarWidget(self.frame_toplevel_progress, sticky='nsew', in_rows=True)
             self.frame_toplevel_progress.update_idletasks()
             self.progress_widget_toplevel.update_idletasks()
-            print('running')
             self.progress_widget.run_progress(run_function, message=message)
             self.frame_toplevel_progress.destroy()
 
         if self.progress_running_toplevel:
-            gui.show_information('Progress is running', 'A progress is running, please wait until it is finished!')
+            self.main_app.show_information('Progress is running', 'A progress is running, please wait until it is finished!')
             return
         self.progress_running = True
         # run_thread = lambda: self.progress_widget.run_progress(run_function, message=message)
@@ -262,12 +217,7 @@ class App(PluginApp):
 
     #===========================================================================
     def startup_pages(self):
-        # Tuple that store all pages
-        
         self.pages_started = dict()
-        
-        
-        # Dictionary to store all frame classes
         self.frames = {}
         
         # Looping all pages to make them active. 
@@ -288,19 +238,11 @@ class App(PluginApp):
             
         self.activate_binding_keys()
 
-    
-    #===========================================================================
     def _set_load_frame(self):
         self._set_frame_add_file() 
         self._set_frame_loaded_files()
-        
-        
-    #===========================================================================
+
     def _set_frame_add_file(self):
-        """
-        Created     20180821    by Magnus 
-        """
-        #----------------------------------------------------------------------
         # Three main frames 
         frame = self.frame_add
         frame_data = tk.LabelFrame(frame, text='Get data file')
@@ -420,10 +362,8 @@ class App(PluginApp):
 
         tkw.grid_configure(frame)
 
-
     def _delete_source(self, file_id, *args, **kwargs):
         file_id = file_id.split(':')[-1].strip()
-        print('_delete_source'.upper(), file_id)
         self.session.remove_file(file_id)
         self.update_all()
 
@@ -435,7 +375,6 @@ class App(PluginApp):
 
         if file_paths:
             self.set_open_directory(file_paths[0], sampling_type)
-            old_sampling_type = self.combobox_widget_sampling_type.get_value()
             self.combobox_widget_sampling_type.set_value(sampling_type)
             file_path_list = []
             for file_path in file_paths:
@@ -444,11 +383,11 @@ class App(PluginApp):
                     continue
                 if sampling_type == 'CTD NODC' and not file_name.startswith('nodc_ctd_profile_'):
                     continue
-                if not file_path_list:
-                    file_path_list.append(file_path)
                 else:
                     file_path_list.append(file_name)
-
+            if not file_path_list:
+                self.logger.info(f'No files matches file name convention for sampling_type "{sampling_type}"')
+                self.main_app.update_help_information(f'No files matches file name convention for sampling_type "{sampling_type}"')
             self.stringvar_data_file.set('; '.join(file_path_list))
 
             self._set_settings(sampling_type, file_paths[0])
@@ -463,7 +402,6 @@ class App(PluginApp):
 
         if file_path:
             self.set_open_directory(file_path, sampling_type)
-            old_sampling_type = self.combobox_widget_sampling_type.get_value() 
             self.combobox_widget_sampling_type.set_value(sampling_type)
             self.stringvar_data_file.set(file_path)
 
@@ -482,15 +420,6 @@ class App(PluginApp):
 
     def _set_settings(self, sampling_type, file_path):
         if file_path:
-            # Check settings file path
-            # settings_file_path = self.combobox_widget_settings_file.get_value()
-            # try:
-            #     self.combobox_widget_settings_file.set_value(self.settings['directory']['Default {} settings'.format(sampling_type)])
-            # except:
-            #      pass
-
-            # User settings
-            # Sampling type
             self.latest_loaded_sampling_type = sampling_type
             s_type = self.user.file_type.setdefault(sampling_type, 'sampling_type', '')
             if s_type:
@@ -517,14 +446,13 @@ class App(PluginApp):
             self.button_load_file.configure(state='disabled')
             self.entry_widget_platform_depth.set_value('')
             self.entry_widget_platform_depth.disable_widget()
-            
-    #===========================================================================
+
     def _import_settings_file(self):
 
         open_directory = self.get_open_directory()
             
         file_path = filedialog.askopenfilename(initialdir=open_directory, 
-                                                filetypes=[('GISMO Settings file','*.ini')])
+                                                filetypes=[('GISMO Settings file', '*.ini')])
         if not file_path:
             return
         self.set_open_directory(file_path)
@@ -537,7 +465,7 @@ class App(PluginApp):
             string = f'open_directory_{suffix.replace(" ", "_")}'
         else:
             string = 'open_directory'
-        return self.user.path.setdefault(string, self.settings['directory']['Input directory'])
+        return self.user.path.setdefault(string, self.user_manager.get_app_settings('directory', 'input directory'))
 
     def set_open_directory(self, directory, suffix=None):
         if os.path.isfile(directory):
@@ -579,6 +507,7 @@ class App(PluginApp):
         data_file_path = self.stringvar_data_file.get()
         if ';' in data_file_path:
             data_file_list = []
+            directory = None
             for k, file_name in enumerate(data_file_path.split(';')):
                 file_name = file_name.strip()
                 if k == 0:
@@ -595,13 +524,14 @@ class App(PluginApp):
                 load_file(file_path)
                 # self.run_progress(load_file, message='Loading file...please wait...')
             except GISMOExceptionMissingPath as e:
+                self.logger.debug(e)
                 main_gui.show_information('Invalid path',
-                                     'The path "{}" given in i settings file "{} can not be found'.format(e.message,
+                                          'The path "{}" given in i settings file "{} can not be found'.format(e.message,
                                                                                                           settings_file_path))
                 self.update_help_information('Please try again with a different settings file.')
 
             except GISMOExceptionMissingInputArgument as e:
-                # print(e.message, '#{}#'.format(e.message), type(e.message))
+                self.logger.debug(e)
                 if 'depth' in e.message:
                     platform_depth = self.entry_widget_platform_depth.get_value()
                     if not platform_depth:
@@ -610,19 +540,19 @@ class App(PluginApp):
                         return
                     load_file(file_path, depth=platform_depth)
             except GISMOExceptionInvalidParameter as e:
+                self.logger.debug(e)
                 main_gui.show_information('Invalid parameter',
                                           f'Could not find parameter {e}. Settings file might have wrong information.')
                 return
             except GISMOExceptionQCfieldError:
                 main_gui.show_error('QC field error',
-                                          f'Something is wrong with the qf columns in file: {file_path}')
+                                     f'Something is wrong with the qf columns in file: {file_path}')
                 return
             except Exception as e:
+                self.logger.debug(e)
                 main_gui.show_internal_error(e)
                 return
 
-
-        # Remove data file text
         self.stringvar_data_file.set('')
 
         self._update_loaded_files_widget()
@@ -649,7 +579,7 @@ class App(PluginApp):
     #===========================================================================
     def _quick_run_F1(self, event):
         try:
-            self.show_frame(gui.PageCTD)
+            self.show_frame(main_gui.PageCTD)
         except:
             pass
             
@@ -672,10 +602,6 @@ class App(PluginApp):
         self.bind("<F1>", self._quick_run_F1)
         self.bind("<F2>", self._quick_run_F2)
         self.bind("<F3>", self._quick_run_F3)
-        
-        # Pages
-        self.bind("<Control-f>", lambda event: self.show_frame(gui.PageFerrybox))
-        self.bind("<Control-b>", lambda event: self.show_frame(gui.PageFixedPlatforms))
 
     def add_working_indicator(self):
         pass
@@ -690,22 +616,15 @@ class App(PluginApp):
 #         self.update_help_information(None)
 #         self.working_indicator.destroy()
 
-    def update_files_information(self):
-        """
-        Updates the file information window (at the bottom left of the screen). 
-        """
-        self.loaded_files_combobox_widget.update_items(sorted(core.Boxen().loaded_ferrybox_files))
-        self.loaded_files_combobox_widget_sample.update_items(sorted(core.Boxen().loaded_sample_files))
-
-    def update_help_information(self, text='', **kwargs):
-        """
-        Created     20180822
-        """
-        kw = dict(bg=self.cget('bg'),
-                  fg='black')
-        kw.update(kwargs)
-        self.info_widget.set_text(text, **kw)
-        self.logger.debug(text)
+    # def update_help_information(self, text='', **kwargs):
+    #     """
+    #     Created     20180822
+    #     """
+    #     kw = dict(bg=self.cget('bg'),
+    #               fg='black')
+    #     kw.update(kwargs)
+    #     self.info_widget.set_text(text, **kw)
+    #     self.logger.debug(text)
 
     def reset_help_information(self):
         """
@@ -717,7 +636,7 @@ class App(PluginApp):
         
         for page_name, frame in self.frames.items():
             if self.pages_started.get(page_name):
-                # print('page_name', page_name)
+                print('page_name', page_name)
                 frame.update_page()
 
     #===========================================================================

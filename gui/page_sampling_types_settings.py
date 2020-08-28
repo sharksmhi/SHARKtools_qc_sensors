@@ -2,15 +2,16 @@
 # Copyright (c) 2018 SMHI, Swedish Meteorological and Hydrological Institute
 # License: MIT License (see LICENSE.txt or http://opensource.org/licenses/mit).
 import os
-import shutil
 import tkinter as tk
 from tkinter import filedialog
+
 import sharkpylib as spl
-import gui as main_gui
 import sharkpylib.tklib.tkinter_widgets as tkw
-from sharkpylib.gismo.sampling_types import SamplingTypeSettings
-from core.exceptions import *
 from sharkpylib.gismo.exceptions import *
+from sharkpylib.gismo.sampling_types import SamplingTypeSettings
+
+import gui as main_gui
+from core.exceptions import *
 
 SETTINGS_FILES_DIRECTORY = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'settings_files')
 MAPPING_FILES_DIRECTORY = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'mapping_files')
@@ -28,7 +29,6 @@ class PageSamplingTypeSettings(tk.Frame):
         self.user_manager = parent_app.user_manager
         self.user = self.user_manager.user
         self.session = parent_app.session
-        self.settings = parent_app.settings
         self.settings_files = parent_app.settings_files
         self.mapping_files = parent_app.mapping_files
 
@@ -516,6 +516,16 @@ class PageSamplingTypeSettings(tk.Frame):
             return
 
         popup_frame = tk.Toplevel(self)
+        app_geometry = self.main_app.geometry()
+        rest, x, y = app_geometry.split('+')
+
+        px = int(x) + 200
+        py = int(y) + 200
+
+        popup_geometry = f'{400}x{200}+{px}+{py}'
+        popup_frame.geometry(popup_geometry)
+        print('self.main_app.geometry()', self.main_app.geometry())
+        print('popup_frame.geometry()', popup_frame.geometry())
         popup_frame.protocol('WM_DELETE_WINDOW', _cancel)
         current_parameter_list = self._get_parameter_list_from_user()
 

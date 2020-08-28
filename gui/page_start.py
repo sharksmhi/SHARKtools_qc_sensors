@@ -6,8 +6,7 @@
 
 import tkinter as tk
 
-from plugins.SHARKtools_qc_sensors import gui
-
+from plugins import SHARKtools_qc_sensors
 
 """
 ================================================================================
@@ -52,9 +51,15 @@ class PageStart(tk.Frame):
         # Buttons 
         self.button = {}
 
-        self.button_texts = {'Ferrybox\nand\nfixed platforms': 'PageTimeSeries',
-                             'CTD Profiles': 'PageProfile',
-                             'Sampling Type Settings': 'PageSamplingTypeSettings'}
+        self.button_texts = {}
+        for page in SHARKtools_qc_sensors.INFO.get('sub_pages'):
+            if page.get('name') == 'PageStart':
+                continue
+            self.button_texts[page.get('title')] = page.get('name')
+
+        # self.button_texts = {'Ferrybox\nand\nfixed platforms': 'PageTimeSeries',
+        #                      'CTD Profiles': 'PageProfile',
+        #                      'Sampling Type Settings': 'PageSamplingTypeSettings'}
         self.button_colors = {'PageTimeSeries': 'sandybrown',
                               'PageProfile': 'lightblue',
                               'PageSamplingTypeSettings': 'green'}
@@ -66,7 +71,7 @@ class PageStart(tk.Frame):
             page = self.button_texts[text]
 
             # text = self.button_texts[page]
-            color = self.button_colors[page]
+            color = self.button_colors.get(page, 'grey')
             self.button[page] = tk.Button(self.frames[r][c],
                                  text=text,
                                  command=lambda x=page: self.controller.show_frame(x),

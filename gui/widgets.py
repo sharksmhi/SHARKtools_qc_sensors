@@ -1689,7 +1689,7 @@ class QCroutineOptionsWidget(tk.Frame):
                 self.user.qc_routine_options.set(self.qc_routine, key, self.parent_app.version)
                 self.widgets[key].deactivate()
             elif 'save' in key.lower() and 'directory' in key.lower():
-                default_directory = os.path.join(self.parent_app.settings['directory']['Export directory'])
+                default_directory = os.path.join(self.user_manager.get_app_settings('directory', 'export directory'))
                 self.widgets[key].default_directory = default_directory
                 self.widgets[key].set_value(self.user.path.setdefault('save_directory_qc', default_directory))
 

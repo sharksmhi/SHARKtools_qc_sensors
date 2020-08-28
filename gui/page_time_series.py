@@ -4,33 +4,27 @@
 # Copyright (c) 2016-2017 SMHI, Swedish Meteorological and Hydrological Institute 
 # License: MIT License (see LICENSE.txt or http://opensource.org/licenses/mit).
 
-import os
 import datetime
-import numpy as np
+import logging
+import os
 import re
-
-import tkinter as tk 
-
-from tkinter import ttk
+import tkinter as tk
 from tkinter import messagebox
+from tkinter import ttk
 
-import pandas as pd
 import matplotlib
-
-from plugins.SHARKtools_qc_sensors import gui
-import gui as main_gui
-import core
-
-import sharkpylib.plot.plot_selector as plot_selector
+import numpy as np
+import pandas as pd
 import sharkpylib.plot.contour_plot as contour_plot
+import sharkpylib.plot.plot_selector as plot_selector
 import sharkpylib.tklib.tkinter_widgets as tkw
 import sharkpylib.tklib.tkmap as tkmap
-
 from sharkpylib.gismo.exceptions import *
+
+import core
+import gui as main_gui
 from core.exceptions import *
-
-import logging
-
+from plugins.SHARKtools_qc_sensors import gui
 
 """
 ================================================================================
@@ -49,7 +43,7 @@ class PageTimeSeries(tk.Frame):
         self.user_manager = parent_app.user_manager
         self.user = self.user_manager.user
         self.session = parent_app.session
-        self.settings = parent_app.settings
+        # self.settings = parent_app.settings
 
         self.colormaps = core.Colormaps()
 
@@ -650,10 +644,9 @@ class PageTimeSeries(tk.Frame):
                                                                                row=1, column=0, columnspan=3)
         tkw.grid_configure(button_frame, nr_rows=2, nr_columns=4)
 
-        default_directory = os.path.join(self.parent_app.settings['directory']['Export directory'],
+        default_directory = os.path.join(self.user_manager.get_app_settings('directory', 'export directory'),
                                          datetime.datetime.now().strftime('%Y%m%d'))
         self.save_correlation_directory_widget.set_directory(default_directory)
-
 
         tkw.grid_configure(frame, nr_rows=3)
 
@@ -823,7 +816,6 @@ class PageTimeSeries(tk.Frame):
             self.plot_object_compare.set_x_label(data['main_par_file_id'])
             self.plot_object_compare.set_y_label(data['compare_par_file_id'])
 
-
     def _compare_data_save_data(self):
         if not gui.communicate.match_data(self, self.compare_widget):
             return
@@ -883,7 +875,7 @@ class PageTimeSeries(tk.Frame):
         self.save_plots_directory_widget = tkw.DirectoryWidgetLabelframe(frame,
                                                                label='Save in directory',
                                                                row=0, columnspan=2, **prop)
-        default_directory = os.path.join(self.parent_app.settings['directory']['Export directory'],
+        default_directory = os.path.join(self.user_manager.get_app_settings('directory', 'export directory'),
                                          datetime.datetime.now().strftime('%Y%m%d'))
         self.save_plots_directory_widget.set_directory(default_directory)
 
@@ -926,7 +918,7 @@ class PageTimeSeries(tk.Frame):
         self.save_widget_html = main_gui.SaveWidgetHTML(frame,
                                                    label='Show and save time series plots in HTML format',
                                                    callback=self._callback_save_html,
-                                                   default_directory=self.settings['directory']['Export directory'],
+                                                   default_directory=self.user_manager.get_app_settings('directory', 'export directory'),
                                                    user=self.user,
                                                    sticky='nw',
                                                    row=2,

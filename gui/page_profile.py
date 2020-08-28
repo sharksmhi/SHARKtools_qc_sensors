@@ -4,35 +4,26 @@
 # Copyright (c) 2016-2017 SMHI, Swedish Meteorological and Hydrological Institute 
 # License: MIT License (see LICENSE.txt or http://opensource.org/licenses/mit).
 
-import os
 import datetime
-import numpy as np
+import logging
+import os
 import re
-
-import tkinter as tk 
-
+import tkinter as tk
 from tkinter import ttk
 
-import pandas as pd
 import matplotlib
-
-import plugins
-from plugins.SHARKtools_qc_sensors import gui
-
-import gui as main_gui
-import core
-
-import sharkpylib.plot.plot_selector as plot_selector
+import numpy as np
+import pandas as pd
 import sharkpylib.plot.contour_plot as contour_plot
+import sharkpylib.plot.plot_selector as plot_selector
 import sharkpylib.tklib.tkinter_widgets as tkw
 import sharkpylib.tklib.tkmap as tkmap
-
 from sharkpylib.gismo.exceptions import *
+
+import core
+import gui as main_gui
 from core.exceptions import *
-
-import logging
-gui_logger = logging.getLogger('gui_logger')
-
+from plugins.SHARKtools_qc_sensors import gui
 
 """
 ================================================================================
@@ -44,17 +35,15 @@ class PageProfile(tk.Frame):
     """
     def __init__(self, parent, parent_app, **kwargs):
         tk.Frame.__init__(self, parent, **kwargs)
-        # parent is the frame "container" in App. contoller is the App class
-        print('PROFILE')
-        import sys
-        print(sys.path)
+
         self.parent = parent
         self.parent_app = parent_app
         self.main_app = self.parent_app.main_app
         self.user_manager = parent_app.user_manager
         self.user = self.user_manager.user
         self.session = parent_app.session
-        self.settings = parent_app.settings
+
+        self.logger = self.main_app.logger
 
         self.colormaps = core.Colormaps()
 
@@ -493,16 +482,16 @@ class PageProfile(tk.Frame):
                 if 'parameter' in e.message and 'list' in e.message:
                     main_gui.show_warning('No parameter selected', 'You need to specify parameters for QC routine {} '
                                                                   'Please open option ans select parameters.'.format(qc_routine))
-                    gui_logger.warning(e)
+                    self.logger.warning(e)
                 elif 'save' in e.message and 'directory' in e.message:
                     main_gui.show_warning('Invalid save directory', 'It seems like the saving directory for QC routine {} '
                                                                'is not valid. Please open option and change or update '
                                                                'directory.'.format(qc_routine))
-                    gui_logger.warning(e)
+                    self.logger.warning(e)
                 else:
                     main_gui.show_error('Unknown error', 'An unknown error related to missing input variable occurred. '
                                                     'Please contact the suupport team: shark@smhi.se')
-                    gui_logger.error(e)
+                    self.logger.error(e)
 
         self.update_page(update_plot_background=True)
 
@@ -746,7 +735,7 @@ class PageProfile(tk.Frame):
         #                                                                        row=1, column=0, columnspan=3)
         # tkw.grid_configure(button_frame, nr_rows=2, nr_columns=4)
         #
-        # default_directory = os.path.join(self.parent_app.settings['directory']['Export directory'],
+        # default_directory = os.path.join(self.user_manager.get_app_settings('directory', 'export directory'),
         #                                  datetime.datetime.now().strftime('%Y%m%d'))
         # self.save_correlation_directory_widget.set_directory(default_directory)
         #
@@ -993,7 +982,7 @@ class PageProfile(tk.Frame):
         self.save_plots_directory_widget = tkw.DirectoryWidgetLabelframe(frame,
                                                                        label='Save in directory',
                                                                        row=0, columnspan=2, **prop)
-        default_directory = os.path.join(self.parent_app.settings['directory']['Export directory'],
+        default_directory = os.path.join(self.user_manager.get_app_settings('directory', 'export directory'),
                                          datetime.datetime.now().strftime('%Y%m%d'))
         self.save_plots_directory_widget.set_directory(default_directory)
 
@@ -1036,7 +1025,7 @@ class PageProfile(tk.Frame):
         # self.save_widget_html = gui.SaveWidgetHTML(frame,
         #                                            label='Show and save time series plots in HTML format',
         #                                            callback=self._callback_save_html,
-        #                                            default_directory=self.settings['directory']['Export directory'],
+        #                                            default_directory=self.user_manager.get_app_settings('directory', 'export directory'),
         #                                            user=self.user,
         #                                            sticky='nw',
         #                                            row=2,
