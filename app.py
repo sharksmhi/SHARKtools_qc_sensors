@@ -56,12 +56,11 @@ class App(PluginApp):
         self.version = '2019.01.1'
         # TODO: Move version to __version__
         self.info_popup = self.main_app.info_popup
+        self.logger = self.main_app.logger
 
         self.plugin_directory = os.path.dirname(os.path.abspath(__file__))
         self.root_directory = self.main_app.root_directory
         self.users_directory = self.main_app.users_directory
-        self.log_directory = self.main_app.log_directory
-        # self.mapping_files_directory = self.main_app.mapping_files_directory
 
     # def get_user_settings(self):
     #     return [('basic', 'test_setting')]
@@ -377,14 +376,17 @@ class App(PluginApp):
             self.set_open_directory(file_paths[0], sampling_type)
             self.combobox_widget_sampling_type.set_value(sampling_type)
             file_path_list = []
-            for file_path in file_paths:
+            for nr, file_path in enumerate(file_paths):
                 file_name = os.path.basename(file_path)
                 if sampling_type == 'CTD DV' and not file_name.startswith('ctd_profile_'):
                     continue
                 if sampling_type == 'CTD NODC' and not file_name.startswith('nodc_ctd_profile_'):
                     continue
                 else:
-                    file_path_list.append(file_name)
+                    if nr == 0:
+                        file_path_list.append(file_path)
+                    else:
+                        file_path_list.append(file_name)
             if not file_path_list:
                 self.logger.info(f'No files matches file name convention for sampling_type "{sampling_type}"')
                 self.main_app.update_help_information(f'No files matches file name convention for sampling_type "{sampling_type}"')
@@ -479,7 +481,7 @@ class App(PluginApp):
     def _load_file(self):
 
         def load_file(data_file_path, **kwargs):
-            self.update_help_information('')
+            self.main_app.update_help_information('')
             self.button_load_file.configure(state='disabled')
 
             settings_file = self.combobox_widget_settings_file.get_value()
@@ -493,7 +495,7 @@ class App(PluginApp):
                                    root_directory=self.root_directory,
                                    **kwargs)
 
-        self.reset_help_information()
+        # self.reset_help_information()
         data_file_path = self.stringvar_data_file.get()
         settings_file = self.combobox_widget_settings_file.get_value()
         settings_file_path = self.settings_files.get_path(settings_file)
@@ -501,7 +503,7 @@ class App(PluginApp):
         # sampling_type = self.combobox_widget_sampling_type.get_value()
         
         if not all([data_file_path, settings_file_path]): 
-            self.update_help_information('No file selected!', fg='red')
+            self.main_app.update_help_information('No file selected!', fg='red')
             return
 
         data_file_path = self.stringvar_data_file.get()
@@ -528,7 +530,7 @@ class App(PluginApp):
                 main_gui.show_information('Invalid path',
                                           'The path "{}" given in i settings file "{} can not be found'.format(e.message,
                                                                                                           settings_file_path))
-                self.update_help_information('Please try again with a different settings file.')
+                self.main_app.update_help_information('Please try again with a different settings file.')
 
             except GISMOExceptionMissingInputArgument as e:
                 self.logger.debug(e)
@@ -559,7 +561,7 @@ class App(PluginApp):
         self.update_all()
         self.button_load_file.configure(state='normal')
 
-        self.update_help_information('File loaded! Please continue.', bg='green')
+        self.main_app.update_help_information('File loaded! Please continue.', bg='green')
 
     def _update_loaded_files_widget(self):
         loaded_files = [] 
@@ -626,11 +628,11 @@ class App(PluginApp):
     #     self.info_widget.set_text(text, **kw)
     #     self.logger.debug(text)
 
-    def reset_help_information(self):
-        """
-        Created     20180822
-        """ 
-        self.info_widget.reset()
+    # def reset_help_information(self):
+    #     """
+    #     Created     20180822
+    #     """
+    #     self.info_widget.reset()
 
     def update_all(self):
         

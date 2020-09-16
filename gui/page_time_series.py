@@ -43,7 +43,7 @@ class PageTimeSeries(tk.Frame):
         self.user_manager = parent_app.user_manager
         self.user = self.user_manager.user
         self.session = parent_app.session
-        # self.settings = parent_app.settings
+        self.logger = parent_app.logger
 
         self.colormaps = core.Colormaps()
 
@@ -1115,8 +1115,11 @@ class PageTimeSeries(tk.Frame):
             self.xrange_selection_widget.clear_widget()
             self.yrange_selection_widget.clear_widget()
         except GUIExceptionNoRangeSelection:
-            gui.show_information('Could not flag data',
-                                 'You need to make a selection under tab "Select data to flag" before you can flag data')
+            self.logger.info('You need to make a selection under tab "Select data to flag" before you can flag data')
+            messagebox.showinfo('Could not flag data',
+                                'You need to make a selection under tab "Select data to flag" before you can flag data')
+        except Exception as e:
+            self.logger.error(e)
 
     def _update_plot(self, **kwargs):
         """

@@ -101,20 +101,17 @@ class PageProfile(tk.Frame):
             clear_plot = True
             self.current_file_id_list = file_id_list
 
-        print('len(gismo_objects)', len(gismo_objects))
         gui.communicate.update_profile_plot_background(gismo_objects=gismo_objects,
                                                                         par=self.current_parameter,
                                                                         plot_object=self.plot_object,
                                                                         flag_widget=self.flag_widget,
-                                                                        help_info_function=self.parent_app.update_help_information,
+                                                                        help_info_function=self.main_app.update_help_information,
                                                                         call_targets=True,
                                                                         clear_plot=clear_plot,
                                                                         user=self.user)
 
         self._sync_x_axis('plot', call_targets=False)
         self._sync_z_axis('plot')
-
-
 
     def _reset_merge_data(self):
         self.current_gismo_match_object = None
@@ -469,8 +466,8 @@ class PageProfile(tk.Frame):
                 return
             else:
                 file_id_list = [self.current_file_id]
-
-        for qc_routine in self.qc_routine_widget.get_selected_qc_routines():
+        selected_qc_routines = self.qc_routine_widget.get_selected_qc_routines()
+        for qc_routine in selected_qc_routines:
             options = self.user.qc_routine_options.get_settings(par=qc_routine)
             # Run QC with matching file_id and qc_routines
             try:
@@ -494,6 +491,9 @@ class PageProfile(tk.Frame):
                     self.logger.error(e)
 
         self.update_page(update_plot_background=True)
+        select_str = '\n'.join(selected_qc_routines)
+        main_gui.show_information('Automatic quality control',
+                                  f'Successfully performed the following quality control(s) on {len(file_id_list)} files: \n{select_str}')
 
     def _set_notebook_frame_map(self):
         frame = self.notebook_options.frame_map
