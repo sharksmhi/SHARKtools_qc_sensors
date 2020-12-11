@@ -8,9 +8,12 @@ import datetime
 import logging
 import os
 import re
+from pathlib import Path
 import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
+
+import traceback
 
 import matplotlib
 import numpy as np
@@ -20,6 +23,7 @@ import sharkpylib.plot.plot_selector as plot_selector
 import sharkpylib.tklib.tkinter_widgets as tkw
 import sharkpylib.tklib.tkmap as tkmap
 from sharkpylib.gismo.exceptions import *
+from sharkpylib.odv.create import SimpleODVfile
 
 import core
 import gui as main_gui
@@ -357,7 +361,7 @@ class PageTimeSeries(tk.Frame):
         #                                            row=0)
         self.notebook_options = tkw.NotebookWidget(self.frame_notebook,
                                                    frames=['Time range', 'Select data to flag', 'Flag selected data',
-                                                           'Compare', 'Save data', 'Save plots', 'Map'],
+                                                           'Compare', 'Save data', 'Save plots', 'Map', 'Automatic QC'],
                                                    row=0)
         tkw.grid_configure(self.frame_notebook, nr_rows=1)
         
@@ -369,20 +373,87 @@ class PageTimeSeries(tk.Frame):
         self._set_notebook_frame_save_data()
         self._set_notebook_frame_save_plots()
         self._set_notebook_frame_map()
-        # self._set_notebook_frame_automatic_qc()
+        self._set_notebook_frame_automatic_qc()
 
     def _set_notebook_frame_automatic_qc(self):
         frame = self.notebook_options.frame_automatic_qc
-        qc_routines = self.session.get_qc_routines()
-        grip_prop = dict(padx=5,
-                         pady=5,
-                         sticky='sw')
-        self.widget_automatic_qc_options = tkw.CheckbuttonWidget(frame, items=qc_routines, **grip_prop)
+        padx = 5
+        pady = 5
 
+        self.qc_routine_widget = gui.widgets.QCroutineWidget(frame,
+                                                             parent_app=self.parent_app,
+                                                             main_app=self.main_app,
+                                                             session=self.session,
+                                                             sticky='nw',
+                                                             row=0)
 
-        self.button_run_automatic_qc = tk.Button(frame, text='Run QC', command=self._run_automatic_qc)
-        self.button_run_automatic_qc.grid(row=0, column=1, **grip_prop)
-        tkw.grid_configure(frame, nr_columns=2)
+        self.boolvar_run_all_files = tk.BooleanVar()
+        self.checkbutton_run_all_files = tk.Checkbutton(frame, text='Run QC on all files',
+                                                        variable=self.boolvar_run_all_files)
+        self.checkbutton_run_all_files.grid(row=1, column=0, sticky='sw', padx=padx, pady=pady)
+
+        self.button_run_automatic_qc = tk.Button(frame, text='Run QC', command=self._run_qc)
+        self.button_run_automatic_qc.grid(row=2, column=0, sticky='sw', padx=padx, pady=pady)
+
+        tkw.grid_configure(frame, nr_rows=3, nr_columns=2)
+
+        # frame = self.notebook_options.frame_automatic_qc
+        # qc_routines = self.session.get_qc_routines()
+        # grip_prop = dict(padx=5,
+        #                  pady=5,
+        #                  sticky='sw')
+        # self.widget_automatic_qc_options = tkw.CheckbuttonWidget(frame, items=qc_routines, **grip_prop)
+        #
+        # self.button_run_automatic_qc = tk.Button(frame, text='Run QC', command=self._run_automatic_qc)
+        # self.button_run_automatic_qc.grid(row=0, column=1, **grip_prop)
+        # tkw.grid_configure(frame, nr_columns=2)
+
+    def _run_qc(self):
+        """
+        Runs quality control on the given file_id_list.
+
+        :param file_id_list: sting or list of file_ids
+        :return:
+        """
+        if self.boolvar_run_all_files.get():
+            file_id_list = self.select_data_widget.get_filtered_file_id_list()
+        else:
+            if not self.current_file_id:
+                main_gui.show_information('No file selected', 'No file selected for Quality Control. '
+                                                         'Select a file in list or check '
+                                                         '"Run QC on all filtered files" to run QC on all files.')
+                return
+            else:
+                file_id_list = [self.current_file_id]
+        selected_qc_routines = self.qc_routine_widget.get_selected_qc_routines()
+        for qc_routine in selected_qc_routines:
+            options = self.user.qc_routine_options.get_settings(par=qc_routine)
+            # Run QC with matching file_id and qc_routines
+            try:
+                self.session.run_automatic_qc(file_id=file_id_list, qc_routine=qc_routine, **options)
+            except ImportError as e:
+                main_gui.show_error('Import error', e)
+
+            except GISMOExceptionMissingInputArgument as e:
+                if 'parameter' in e.message and 'list' in e.message:
+                    main_gui.show_warning('No parameter selected', 'You need to specify parameters for QC routine {} '
+                                                                  'Please open option ans select parameters.'.format(qc_routine))
+                    self.logger.warning(e)
+                elif 'save' in e.message and 'directory' in e.message:
+                    main_gui.show_warning('Invalid save directory', 'It seems like the saving directory for QC routine {} '
+                                                               'is not valid. Please open option and change or update '
+                                                               'directory.'.format(qc_routine))
+                    self.logger.warning(e)
+                else:
+                    main_gui.show_error('Unknown error', 'An unknown error related to missing input variable occurred. '
+                                                   f'Please contact the suupport team: shark@smhi.se\n\n{traceback.format_exc()}')
+                    self.logger.error(e)
+                return
+
+        self.update_page()
+        select_str = '\n'.join(selected_qc_routines)
+        main_gui.show_information('Automatic quality control',
+                                  f'Successfully performed the following quality control(s) on {len(file_id_list)} files: \n{select_str}')
 
     def _set_notebook_frame_map(self):
         frame = self.notebook_options.frame_map
@@ -855,6 +926,7 @@ class PageTimeSeries(tk.Frame):
         self.save_file_widget = main_gui.SaveWidget(frame,
                                                label='Save file',
                                                callback=self._callback_save_file,
+                                               callback_odv=self._callback_save_odv_file,
                                                user=self.user,
                                                sticky='nw')
 
@@ -933,6 +1005,18 @@ class PageTimeSeries(tk.Frame):
                                       save_widget=self.save_file_widget)
         except Exception as e:
             main_gui.show_warning('Save file', f'Something went wrong when trying to save file: {e}')
+
+    def _callback_save_odv_file(self, directory, file_name, *args, **kwargs):
+        try:
+            file_name = 'for_odv_' + file_name
+            file_path = Path(directory, file_name)
+            gismo_object = self.session.get_gismo_object(self.current_file_id)
+            odv_file_object = SimpleODVfile.from_gismo_object(gismo_object)
+            odv_file_object.create_file(file_path)
+            main_gui.show_information('Save file',
+                                  f'File for ODV saved: {file_path}')
+        except Exception as e:
+            main_gui.show_warning('Save file', f'Something went wrong when trying to save file: {traceback.format_exc()}')
 
     def _callback_save_html(self):
         if self.save_widget_html.has_sufficient_selections():
@@ -1048,7 +1132,7 @@ class PageTimeSeries(tk.Frame):
 
     def _on_select_parameter(self):
         # Reset plot
-        self.parent_app.update_help_information()
+        self.main_app.update_help_information()
         self.plot_object.reset_plot()
 
         self.current_parameter = self.parameter_widget.get_value()
@@ -1085,7 +1169,7 @@ class PageTimeSeries(tk.Frame):
 
         self._update_map_2()
 
-        self.parent_app.update_help_information('Parameter updated', bg='green')
+        self.main_app.update_help_information('Parameter updated', bg='green')
 
     def _check_loaded_data(self):
         """
@@ -1133,7 +1217,7 @@ class PageTimeSeries(tk.Frame):
                                         par=self.current_parameter,
                                         plot_object=self.plot_object,
                                         flag_widget=self.flag_widget,
-                                        help_info_function=self.parent_app.update_help_information,
+                                        help_info_function=self.main_app.update_help_information,
                                         call_targets=kwargs.get('call_targets', True))
         except GISMOExceptionNoData as e:
             main_gui.show_information('No data found!', f'No data in file for parameter: {self.current_parameter}')
@@ -1298,15 +1382,9 @@ class PageTimeSeries(tk.Frame):
 
         self._update_frame_reference_file()
 
-        # self._update_frame_automatic_qc()
+        self.qc_routine_widget.update_widget(self.current_file_id)
 
-        self.parent_app.update_help_information('File updated: {}'.format(self.current_file_id), bg='green')
-
-
-    def _update_frame_automatic_qc(self):
-        self.widget_automatic_qc_options.deactivate_all()
-        for routine in self.session.get_valid_qc_routines(self.current_file_id):
-            self.widget_automatic_qc_options.activate(routine)
+        self.main_app.update_help_information('File updated: {}'.format(self.current_file_id), bg='green')
 
     def _update_valid_time_range_in_time_axis(self):
         data_file_string = self.select_data_widget.get_value()

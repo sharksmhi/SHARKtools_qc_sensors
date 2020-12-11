@@ -10,6 +10,7 @@ import os
 import re
 import tkinter as tk
 from tkinter import ttk
+import traceback
 
 import matplotlib
 import numpy as np
@@ -487,8 +488,9 @@ class PageProfile(tk.Frame):
                     self.logger.warning(e)
                 else:
                     main_gui.show_error('Unknown error', 'An unknown error related to missing input variable occurred. '
-                                                    'Please contact the suupport team: shark@smhi.se')
+                                                    f'Please contact the suupport team: shark@smhi.se\n\n{traceback.format_exc()}')
                     self.logger.error(e)
+                return
 
         self.update_page(update_plot_background=True)
         select_str = '\n'.join(selected_qc_routines)
@@ -944,7 +946,7 @@ class PageProfile(tk.Frame):
 
             self.map_widget_1.add_scatter(match_data['lat'], match_data['lat'], marker_id='match_data')
         except GISMOExceptionInvalidOption as e:
-            gui.show_warning('Invalid option', e)
+            main_gui.show_warning('Invalid option', e)
 
     def _set_notebook_frame_save_data(self):
 
@@ -1157,7 +1159,7 @@ class PageProfile(tk.Frame):
 
     def _on_select_parameter(self):
         # Reset plot
-        self.parent_app.update_help_information()
+        # self.parent_app.update_help_information()
         # self.plot_object.reset_plot()
 
         self.old_parameter = self.current_parameter
@@ -1188,7 +1190,7 @@ class PageProfile(tk.Frame):
 
         self._update_map_2()
 
-        self.parent_app.update_help_information('Parameter updated', bg='green')
+        # self.parent_app.update_help_information('Parameter updated', bg='green')
 
     def _check_loaded_data(self):
         """
@@ -1234,7 +1236,7 @@ class PageProfile(tk.Frame):
                                 par=self.current_parameter,
                                 plot_object=self.plot_object,
                                 flag_widget=self.flag_widget,
-                                help_info_function=self.parent_app.update_help_information,
+                                help_info_function=self.main_app.update_help_information,
                                 call_targets=kwargs.get('call_targets', True),
                                 clear_plot=False)
 
@@ -1370,45 +1372,6 @@ class PageProfile(tk.Frame):
 
         self.parameter_contour_plot_widget.update_items(sorted(self.current_contour_parameters))
 
-    #===========================================================================
-    def old_update_file(self):
-
-        self._set_current_file()
-
-        self._reset_merge_data()
-
-        if not self.current_file_id:
-            self.save_file_widget.set_file_path('')
-            self.stringvar_current_data_file.set('')
-            return
-
-        self._reset_widgets()
-
-        self._update_notebook_frame_flag()
-
-        # self._update_valid_time_range_in_time_axis()
-
-        self._set_notebook_compare_plot()
-
-        self._update_parameter_list()
-
-        self._on_select_parameter()
-
-        self._update_map_1()
-
-        self._update_frame_save_widgets()
-
-        self._update_frame_reference_file()
-
-        # self._update_frame_automatic_qc()
-
-        self.parent_app.update_help_information('File updated: {}'.format(self.current_file_id), bg='green')
-
-
-    def _update_frame_automatic_qc(self):
-        self.widget_automatic_qc_options.deactivate_all()
-        for routine in self.session.get_valid_qc_routines(self.current_file_id):
-            self.widget_automatic_qc_options.activate(routine)
 
     def _update_valid_time_range_in_time_axis(self):
         data_file_string = self.select_data_widget.get_selected_file_id()
@@ -1579,5 +1542,5 @@ class PageProfile(tk.Frame):
         self._update_compare_widget()
 
         logging.debug('page_fixed_platforms._update_file_reference: End')
-        self.parent_app.update_help_information('Reference file updated: {}'.format(self.current_ref_file_id), bg='green')
+        self.main_app.update_help_information('Reference file updated: {}'.format(self.current_ref_file_id), bg='green')
 

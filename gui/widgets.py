@@ -1641,13 +1641,17 @@ class QCroutineOptionsWidget(tk.Frame):
         c=0
         for key in sorted(self.options):
             value = self.options.get(key)
-            frame = tk.LabelFrame(self, text=key)
+            name = key.replace('_', ' ').capitalize()
+            frame = tk.LabelFrame(self, text=name)
             frame.grid(row=r, column=c, sticky='nsew')
             self.labelframes[key] = frame
 
             if 'directory' in key:
                 self.widgets[key] = tkw.DirectoryWidget(frame,
                                                         include_default_button=True,
+                                                        row=r)
+            elif 'file' in key and 'path' in key:
+                self.widgets[key] = tkw.FilePathWidget(frame,
                                                         row=r)
             elif value == str or type(value) == str:
                 self.widgets[key] = tkw.EntryWidget(frame, entry_type='path', row=r)
@@ -1689,7 +1693,7 @@ class QCroutineOptionsWidget(tk.Frame):
                 self.user.qc_routine_options.set(self.qc_routine, key, self.parent_app.version)
                 self.widgets[key].deactivate()
             elif 'save' in key.lower() and 'directory' in key.lower():
-                default_directory = os.path.join(self.user_manager.get_app_settings('directory', 'export directory'))
+                default_directory = os.path.join(self.parent_app.user_manager.get_app_settings('directory', 'export directory'))
                 self.widgets[key].default_directory = default_directory
                 self.widgets[key].set_value(self.user.path.setdefault('save_directory_qc', default_directory))
 
